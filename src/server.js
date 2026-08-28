@@ -37,5 +37,5 @@ setupSockets(io);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log("SquadQueue server listening on port " + PORT);
+  console.log("MosUP server listening on port " + PORT);
 });
