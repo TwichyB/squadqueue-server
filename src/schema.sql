@@ -70,3 +70,17 @@ CREATE TABLE IF NOT EXISTS reputation_votes (
 );
 
 CREATE INDEX IF NOT EXISTS idx_reputation_votes_target ON reputation_votes (target_id);
+
+-- Blocking is mutual: if A blocks B, neither sees the other in the lobby and
+-- neither can message the other, regardless of which direction the block row
+-- points. We still store direction (who blocked whom) so a person can see
+-- and manage their own block list / unblock someone later.
+CREATE TABLE IF NOT EXISTS blocks (
+  blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (blocker_id, blocked_id),
+  CHECK (blocker_id <> blocked_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_blocks_blocked ON blocks (blocked_id);

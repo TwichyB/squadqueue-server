@@ -9,6 +9,17 @@ router.get("/:otherId/messages", requireAuth, async (req, res) => {
   if (!Number.isInteger(otherId)) return res.status(400).json({ error: "invalid id" });
 
   try {
+    const blockCheck = await pool.query(
+      `SELECT 1 FROM blocks
+       WHERE (blocker_id = $1 AND blocked_id = $2)
+          OR (blocker_id = $2 AND blocked_id = $1)
+       LIMIT 1`,
+      [req.userId, otherId]
+    );
+    if (blockCheck.rows.length > 0) {
+      return res.json({ messages: [] });
+    }
+
     const result = await pool.query(
       `SELECT id, sender_id, receiver_id, content, created_at FROM messages
        WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)

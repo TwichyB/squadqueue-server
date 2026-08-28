@@ -42,6 +42,18 @@ function setupSockets(io) {
           return;
         }
 
+        const blockCheck = await pool.query(
+          `SELECT 1 FROM blocks
+           WHERE (blocker_id = $1 AND blocked_id = $2)
+              OR (blocker_id = $2 AND blocked_id = $1)
+           LIMIT 1`,
+          [userId, to]
+        );
+        if (blockCheck.rows.length > 0) {
+          if (typeof ack === "function") ack({ ok: false, error: "ส่งข้อความไม่ได้ ผู้ใช้นี้ถูกบล็อกอยู่" });
+          return;
+        }
+
         const result = await pool.query(
           "INSERT INTO messages (sender_id, receiver_id, content) VALUES ($1, $2, $3) RETURNING id, sender_id, receiver_id, content, created_at",
           [userId, to, content]

@@ -16,6 +16,7 @@ const profileRoutes = require("./routes/profile");
 const candidatesRoutes = require("./routes/candidates");
 const chatRoutes = require("./routes/chat");
 const reputationRoutes = require("./routes/reputation");
+const blocksRoutes = require("./routes/blocks");
 const { setupSockets } = require("./socket");
 
 const app = express();
@@ -28,6 +29,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/candidates", candidatesRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/users", reputationRoutes);
+app.use("/api/users", blocksRoutes);
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 

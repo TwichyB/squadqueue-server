@@ -2,9 +2,10 @@
   "use strict";
 
   /* ---------------- static data ---------------- */
-  var GAMES = ["Valorant","League of Legends","RoV","PUBG Mobile","Free Fire","Genshin Impact",
-    "Honkai: Star Rail","Mobile Legends","Apex Legends","Overwatch 2","EA Sports FC","Minecraft",
-    "Elden Ring","Stardew Valley","Teamfight Tactics"];
+  var GAMES = ["Valorant","League of Legends","Dota 2","RoV","PUBG Mobile","Free Fire","Genshin Impact",
+    "Honkai: Star Rail","Zenless Zone Zero","Wuthering Waves","Mobile Legends","Apex Legends","Overwatch 2",
+    "Counter-Strike 2","Fortnite","Call of Duty: Mobile","Naraka: Bladepoint","Marvel Rivals",
+    "EA Sports FC","Minecraft","Roblox","Grand Theft Auto V","Elden Ring","Stardew Valley","Teamfight Tactics"];
 
   var DAYS = [
     {id:"mon",label:"จ"},{id:"tue",label:"อ"},{id:"wed",label:"พ"},{id:"thu",label:"พฤ"},
@@ -96,7 +97,25 @@
   /* ---------------- notifications (in-app popup + browser desktop) ---------------- */
   var MATCH_NOTIFY_THRESHOLD = 30;
 
+  // Whether the user has turned notifications ON in-app. This is separate
+  // from window.Notification.permission: the browser permission, once
+  // granted, cannot be revoked via JS, so we keep our own on/off preference
+  // and gate every notification (in-app card + desktop) behind it. Defaults
+  // to on so existing behavior doesn't change for people who never touch it.
+  function notifPrefKey(){ return "squadqueue_notif_enabled_" + (state.user ? state.user.id : "anon"); }
+  function isNotifEnabled(){
+    try{
+      var raw = localStorage.getItem(notifPrefKey());
+      if(raw === null) return true;
+      return raw === "1";
+    }catch(e){ return true; }
+  }
+  function setNotifEnabled(on){
+    try{ localStorage.setItem(notifPrefKey(), on ? "1" : "0"); }catch(e){}
+  }
+
   function showNotification(title, text, onClick){
+    if(!isNotifEnabled()) return;
     var stack = document.getElementById("notifStack");
     var card = el("div",{class:"notif-card"});
     card.appendChild(el("div",{class:"notif-icon"},["🔔"]));
@@ -129,19 +148,65 @@
   function updateNotifToggleBtn(){
     var btn = document.getElementById("notifToggleBtn");
     if(!btn) return;
-    var granted = window.Notification && Notification.permission === "granted";
-    btn.classList.toggle("enabled", !!granted);
-    btn.title = granted ? "แจ้งเตือนเปิดอยู่" : "เปิดการแจ้งเตือน";
+    var on = isNotifEnabled();
+    btn.classList.toggle("enabled", on);
+    btn.title = on ? "แจ้งเตือนเปิดอยู่ (กดเพื่อปิด)" : "แจ้งเตือนปิดอยู่ (กดเพื่อเปิด)";
   }
 
   function toggleNotifPermission(){
-    if(!window.Notification){ showToast("เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนเดสก์ท็อป"); return; }
-    if(Notification.permission === "granted"){ showToast("เปิดการแจ้งเตือนอยู่แล้ว"); return; }
-    if(Notification.permission === "denied"){ showToast("การแจ้งเตือนถูกบล็อกไว้ ต้องไปเปิดในตั้งค่าเบราว์เซอร์เอง"); return; }
-    Notification.requestPermission().then(function(perm){
+    if(isNotifEnabled()){
+      // Turning off never touches the browser's own Notification.permission
+      // (it can't be revoked from JS anyway) — we just stop using it.
+      setNotifEnabled(false);
       updateNotifToggleBtn();
-      showToast(perm === "granted" ? "เปิดการแจ้งเตือนแล้ว!" : "ไม่ได้เปิดการแจ้งเตือน");
+      showToast("ปิดการแจ้งเตือนแล้ว");
+      return;
+    }
+
+    if(!window.Notification){
+      // No desktop notification API at all, but in-app notification cards
+      // still work fine, so just flip the preference on.
+      setNotifEnabled(true);
+      updateNotifToggleBtn();
+      showToast("เปิดการแจ้งเตือนแล้ว!");
+      return;
+    }
+    if(Notification.permission === "denied"){
+      // Can still enable in-app cards even if desktop notifications are
+      // blocked at the browser level.
+      setNotifEnabled(true);
+      updateNotifToggleBtn();
+      showToast("เปิดการแจ้งเตือนในแอปแล้ว (แจ้งเตือนเดสก์ท็อปถูกบล็อกไว้ที่เบราว์เซอร์)");
+      return;
+    }
+    if(Notification.permission === "granted"){
+      setNotifEnabled(true);
+      updateNotifToggleBtn();
+      showToast("เปิดการแจ้งเตือนแล้ว!");
+      return;
+    }
+    Notification.requestPermission().then(function(perm){
+      setNotifEnabled(true);
+      updateNotifToggleBtn();
+      showToast(perm === "granted" ? "เปิดการแจ้งเตือนแล้ว!" : "เปิดการแจ้งเตือนในแอปแล้ว");
     });
+  }
+
+  /* ---------------- per-user mute (client-side only, per browser) ---------------- */
+  function mutedKey(){ return "squadqueue_muted_" + (state.user ? state.user.id : "anon"); }
+  function loadMuted(){
+    try{ var raw = localStorage.getItem(mutedKey()); return raw ? new Set(JSON.parse(raw)) : new Set(); }
+    catch(e){ return new Set(); }
+  }
+  function saveMuted(set){
+    try{ localStorage.setItem(mutedKey(), JSON.stringify(Array.from(set))); }catch(e){}
+  }
+  function isMuted(candId){ return loadMuted().has(candId); }
+  function toggleMute(candId){
+    var muted = loadMuted();
+    if(muted.has(candId)) muted.delete(candId); else muted.add(candId);
+    saveMuted(muted);
+    return muted.has(candId);
   }
 
   function seenMatchesKey(){ return "squadqueue_seen_matches_" + (state.user ? state.user.id : "anon"); }
@@ -157,8 +222,10 @@
     if(!state.profile) return;
     var seen = loadSeenMatches();
     var fresh = [];
+    var muted = loadMuted();
     state.candidates.forEach(function(c){
       if(seen.has(c.id)) return;
+      if(muted.has(c.id)) return;
       var score = matchScore(state.profile, c);
       if(score.total > MATCH_NOTIFY_THRESHOLD){
         seen.add(c.id);
@@ -575,7 +642,9 @@
     });
     card.appendChild(breakdown);
 
-    card.appendChild(el("div",{class:"good-to-know"},["“"+(cand.goodToKnow||"")+"”"]));
+    if(cand.goodToKnow && cand.goodToKnow.trim()){
+      card.appendChild(el("div",{class:"good-to-know"},["“"+cand.goodToKnow+"”"]));
+    }
 
     var cta = el("div",{class:"card-cta"},["ทักไปคุย"]);
     cta.addEventListener("click", function(){ openChat(cand); });
@@ -658,10 +727,17 @@
     av.textContent = initials(cand.name);
     document.getElementById("chatName").textContent = cand.name;
     document.getElementById("chatStatus").textContent = (state.onlineIds.has(cand.id) ? "ออนไลน์ตอนนี้" : "ออฟไลน์") + " · " + GENDER_LABELS[cand.gender];
-    document.getElementById("chatGoodToKnow").textContent = "“"+(cand.goodToKnow||"")+"”";
+    var chatGtk = document.getElementById("chatGoodToKnow");
+    var hasGtk = cand.goodToKnow && cand.goodToKnow.trim();
+    chatGtk.textContent = hasGtk ? "“"+cand.goodToKnow+"”" : "";
+    chatGtk.hidden = !hasGtk;
     var chatRep = document.getElementById("chatReputation");
     chatRep.innerHTML = "";
     chatRep.appendChild(buildReputationWidget(cand));
+
+    var muteBtn = document.getElementById("muteChatBtn");
+    muteBtn.classList.toggle("active", isMuted(cand.id));
+    muteBtn.title = isMuted(cand.id) ? "เปิดแจ้งเตือนคนนี้อีกครั้ง" : "ปิดแจ้งเตือนคนนี้";
 
     document.getElementById("chatPanel").hidden = false;
     document.getElementById("scrim").hidden = false;
@@ -711,6 +787,66 @@
     });
   }
 
+  /* ---------------- block / unblock ---------------- */
+  function blockCurrentChatUser(){
+    var candId = state.activeChatId;
+    if(!candId) return;
+    var cand = findCandidate(candId);
+    var blockBtn = document.getElementById("blockChatBtn");
+    blockBtn.disabled = true;
+    apiFetch("/users/" + candId + "/block", {method:"POST"}).then(function(){
+      closeChat();
+      state.candidates = state.candidates.filter(function(c){ return c.id !== candId; });
+      if(!document.getElementById("viewLobby").hidden) renderGrid();
+      showToast((cand ? cand.name : "ผู้ใช้นี้") + " ถูกบล็อกแล้ว");
+    }).catch(function(err){
+      showToast(err.message || "บล็อกไม่สำเร็จ ลองใหม่อีกครั้ง");
+    }).finally(function(){
+      blockBtn.disabled = false;
+    });
+  }
+
+  function renderBlockedList(){
+    var mount = document.getElementById("blockedListMount");
+    mount.innerHTML = "";
+    mount.appendChild(el("div",{class:"p-card-status",style:"text-align:center;padding:14px;"},["กำลังโหลด..."]));
+
+    apiFetch("/users/blocked").then(function(data){
+      mount.innerHTML = "";
+      var blocked = data.blocked || [];
+      if(blocked.length === 0){
+        mount.appendChild(el("div",{class:"blocked-empty"},["คุณยังไม่ได้บล็อกใครไว้"]));
+        return;
+      }
+      var list = el("div",{class:"blocked-list"});
+      blocked.forEach(function(b){
+        var row = el("div",{class:"blocked-item"});
+        row.appendChild(makeAvatar(b.name, 34));
+        row.appendChild(el("div",{class:"name"},[b.name]));
+        var unblockBtn = el("button",{class:"btn btn-ghost btn-sm", type:"button"},["เลิกบล็อก"]);
+        unblockBtn.addEventListener("click", function(){
+          unblockBtn.disabled = true;
+          apiFetch("/users/" + b.id + "/unblock", {method:"POST"}).then(function(){
+            showToast(b.name + " ถูกเลิกบล็อกแล้ว");
+            renderBlockedList();
+            loadCandidates().then(function(){
+              if(!document.getElementById("viewLobby").hidden) renderGrid();
+            }).catch(function(){});
+          }).catch(function(err){
+            showToast(err.message || "เลิกบล็อกไม่สำเร็จ ลองใหม่อีกครั้ง");
+            unblockBtn.disabled = false;
+          });
+        });
+        row.appendChild(unblockBtn);
+        list.appendChild(row);
+      });
+      mount.appendChild(list);
+    }).catch(function(err){
+      mount.innerHTML = "";
+      mount.appendChild(el("div",{class:"blocked-empty"},[err.message || "โหลดรายชื่อไม่สำเร็จ"]));
+    });
+  }
+
   /* ---------------- socket / presence ---------------- */
   function connectSocket(){
     if(state.socket || typeof io === "undefined") return;
@@ -735,7 +871,7 @@
       if(isOpenChat){
         appendMessage(m);
       }
-      if(m.from === "them" && (!isOpenChat || document.hidden)){
+      if(m.from === "them" && (!isOpenChat || document.hidden) && !isMuted(otherId)){
         var cand = findCandidate(otherId);
         showNotification("ข้อความใหม่จาก " + (cand ? cand.name : "เพื่อนใหม่"), m.text, function(){
           if(cand) openChat(cand);
@@ -1156,10 +1292,32 @@
     document.getElementById("scrim").hidden = true;
   });
   document.getElementById("closeChatBtn").addEventListener("click", closeChat);
+  document.getElementById("muteChatBtn").addEventListener("click", function(){
+    if(!state.activeChatId) return;
+    var nowMuted = toggleMute(state.activeChatId);
+    var btn = document.getElementById("muteChatBtn");
+    btn.classList.toggle("active", nowMuted);
+    btn.title = nowMuted ? "เปิดแจ้งเตือนคนนี้อีกครั้ง" : "ปิดแจ้งเตือนคนนี้";
+    showToast(nowMuted ? "ปิดแจ้งเตือนจากคนนี้แล้ว" : "เปิดแจ้งเตือนจากคนนี้แล้ว");
+  });
+  document.getElementById("blockChatBtn").addEventListener("click", blockCurrentChatUser);
+  document.getElementById("blockedListBtn").addEventListener("click", function(){
+    renderBlockedList();
+    document.getElementById("blockedModal").hidden = false;
+    document.getElementById("scrim").hidden = false;
+  });
+  document.getElementById("closeBlockedModalBtn").addEventListener("click", function(){
+    document.getElementById("blockedModal").hidden = true;
+    document.getElementById("scrim").hidden = true;
+  });
   document.getElementById("scrim").addEventListener("click", function(){
     if(!document.getElementById("chatPanel").hidden) closeChat();
     if(!document.getElementById("profileModal").hidden){
       document.getElementById("profileModal").hidden = true;
+      document.getElementById("scrim").hidden = true;
+    }
+    if(!document.getElementById("blockedModal").hidden){
+      document.getElementById("blockedModal").hidden = true;
       document.getElementById("scrim").hidden = true;
     }
   });

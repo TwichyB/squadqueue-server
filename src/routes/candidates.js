@@ -14,6 +14,11 @@ router.get("/", requireAuth, async (req, res) => {
        JOIN users u ON u.id = p.user_id
        LEFT JOIN reputation_votes rv ON rv.target_id = p.user_id AND rv.voter_id = $1
        WHERE p.user_id != $1
+         AND NOT EXISTS (
+           SELECT 1 FROM blocks b
+           WHERE (b.blocker_id = $1 AND b.blocked_id = p.user_id)
+              OR (b.blocked_id = $1 AND b.blocker_id = p.user_id)
+         )
        ORDER BY p.updated_at DESC
        LIMIT 200`,
       [req.userId]
