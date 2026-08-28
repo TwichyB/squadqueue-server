@@ -1,4 +1,4 @@
-// Sends transactional email through the SMTP2GO HTTP API (https://smtp2go.com)
+// Sends transactional email through the Brevo HTTP API (https://www.brevo.com)
 // instead of SMTP. We call the REST API directly with fetch rather than
 // adding a client package, since Node 18+ (this project's minimum) has
 // fetch built in and the only thing we need is one POST request.
@@ -6,18 +6,18 @@
 // Why not SMTP/Gmail: Render's free web service plan blocks all outbound
 // traffic to SMTP ports (25/465/587), so a direct connection to
 // smtp.gmail.com times out no matter how correct the credentials are.
-// SMTP2GO's API rides over plain HTTPS (443), which isn't blocked.
+// Brevo's API rides over plain HTTPS (443), which isn't blocked.
 //
-// Why SMTP2GO over Resend: Resend's free plan only delivers to the email
-// address the Resend account itself was signed up with until you verify a
-// domain you own. SMTP2GO's free plan lets you verify a single sender email
-// address (no domain required — https://app.smtp2go.com/senders/) and once
-// that's done it can send to ANY recipient, which is what a real signup flow
-// needs. The tradeoff is deliverability: without domain-level SPF/DKIM
-// alignment, mail is a little more likely to land in spam than with a fully
-// verified domain — acceptable for now, worth revisiting if that becomes a
-// real problem.
-const SMTP2GO_API_URL = "https://api.smtp2go.com/v3/email/send";
+// Why Brevo (instead of Resend or SMTP2GO, which we tried first):
+//   - Resend's free plan only delivers to the email address the Resend
+//     account itself was signed up with until you verify a domain you own.
+//   - SMTP2GO requires the *account signup* email itself to be on a private/
+//     business domain — it rejects gmail.com/yahoo.com addresses outright,
+//     which blocks signing up at all until you already have a domain email.
+//   - Brevo has neither restriction: you can sign up with any email, and a
+//     verified single sender (or, better, a verified domain — see
+//     .env.example) can send to any recipient on the free plan (300/day).
+const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 function verificationEmailHtml(verifyUrl) {
   return (
@@ -34,25 +34,26 @@ function verificationEmailHtml(verifyUrl) {
 }
 
 async function sendVerificationEmail(toEmail, verifyUrl) {
-  const apiKey = process.env.SMTP2GO_API_KEY;
-  const sender = process.env.SMTP2GO_SENDER;
-  if (!apiKey || !sender) {
-    console.log("[mailer] SMTP2GO not configured — verification link for " + toEmail + ": " + verifyUrl);
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.BREVO_SENDER_EMAIL;
+  const senderName = process.env.BREVO_SENDER_NAME || "SquadQueue";
+  if (!apiKey || !senderEmail) {
+    console.log("[mailer] Brevo not configured — verification link for " + toEmail + ": " + verifyUrl);
     return;
   }
 
-  const res = await fetch(SMTP2GO_API_URL, {
+  const res = await fetch(BREVO_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Smtp2go-Api-Key": apiKey,
+      "api-key": apiKey,
       Accept: "application/json"
     },
     body: JSON.stringify({
-      sender: sender,
-      to: [toEmail],
+      sender: { email: senderEmail, name: senderName },
+      to: [{ email: toEmail }],
       subject: "ยืนยันอีเมลของคุณ - SquadQueue",
-      html_body: verificationEmailHtml(verifyUrl)
+      htmlContent: verificationEmailHtml(verifyUrl)
     })
   });
 
@@ -60,7 +61,7 @@ async function sendVerificationEmail(toEmail, verifyUrl) {
     const body = await res.text().catch(function () {
       return "";
     });
-    throw new Error("SMTP2GO API error " + res.status + ": " + body);
+    throw new Error("Brevo API error " + res.status + ": " + body);
   }
 }
 
