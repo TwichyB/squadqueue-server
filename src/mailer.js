@@ -1,19 +1,23 @@
-// Sends transactional email through the Resend HTTP API (https://resend.com)
+// Sends transactional email through the SMTP2GO HTTP API (https://smtp2go.com)
 // instead of SMTP. We call the REST API directly with fetch rather than
-// adding the "resend" npm package, since Node 18+ (this project's minimum)
-// has fetch built in and the only thing we need is one POST request.
+// adding a client package, since Node 18+ (this project's minimum) has
+// fetch built in and the only thing we need is one POST request.
 //
 // Why not SMTP/Gmail: Render's free web service plan blocks all outbound
 // traffic to SMTP ports (25/465/587), so a direct connection to
 // smtp.gmail.com times out no matter how correct the credentials are.
-// Resend's API rides over plain HTTPS (443), which isn't blocked.
+// SMTP2GO's API rides over plain HTTPS (443), which isn't blocked.
 //
-// Note: without a verified sending domain on Resend, the account can only
-// deliver to the email address the Resend account itself was signed up
-// with — sending to any other address returns a 403 from Resend's API.
-// That's a Resend-side restriction, not a bug here; verifying a domain at
-// https://resend.com/domains lifts it for real end users.
-const RESEND_API_URL = "https://api.resend.com/emails";
+// Why SMTP2GO over Resend: Resend's free plan only delivers to the email
+// address the Resend account itself was signed up with until you verify a
+// domain you own. SMTP2GO's free plan lets you verify a single sender email
+// address (no domain required — https://app.smtp2go.com/senders/) and once
+// that's done it can send to ANY recipient, which is what a real signup flow
+// needs. The tradeoff is deliverability: without domain-level SPF/DKIM
+// alignment, mail is a little more likely to land in spam than with a fully
+// verified domain — acceptable for now, worth revisiting if that becomes a
+// real problem.
+const SMTP2GO_API_URL = "https://api.smtp2go.com/v3/email/send";
 
 function verificationEmailHtml(verifyUrl) {
   return (
@@ -30,25 +34,25 @@ function verificationEmailHtml(verifyUrl) {
 }
 
 async function sendVerificationEmail(toEmail, verifyUrl) {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.log("[mailer] RESEND_API_KEY not configured — verification link for " + toEmail + ": " + verifyUrl);
+  const apiKey = process.env.SMTP2GO_API_KEY;
+  const sender = process.env.SMTP2GO_SENDER;
+  if (!apiKey || !sender) {
+    console.log("[mailer] SMTP2GO not configured — verification link for " + toEmail + ": " + verifyUrl);
     return;
   }
 
-  const from = process.env.RESEND_FROM || "SquadQueue <onboarding@resend.dev>";
-
-  const res = await fetch(RESEND_API_URL, {
+  const res = await fetch(SMTP2GO_API_URL, {
     method: "POST",
     headers: {
-      Authorization: "Bearer " + apiKey,
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "X-Smtp2go-Api-Key": apiKey,
+      Accept: "application/json"
     },
     body: JSON.stringify({
-      from: from,
+      sender: sender,
       to: [toEmail],
       subject: "ยืนยันอีเมลของคุณ - SquadQueue",
-      html: verificationEmailHtml(verifyUrl)
+      html_body: verificationEmailHtml(verifyUrl)
     })
   });
 
@@ -56,7 +60,7 @@ async function sendVerificationEmail(toEmail, verifyUrl) {
     const body = await res.text().catch(function () {
       return "";
     });
-    throw new Error("Resend API error " + res.status + ": " + body);
+    throw new Error("SMTP2GO API error " + res.status + ": " + body);
   }
 }
 
