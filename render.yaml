@@ -1,0 +1,27 @@
+# Optional one-click blueprint for Render (https://render.com).
+# In the Render dashboard: New -> Blueprint -> point it at this repo.
+# It provisions a free Postgres database and a web service, and wires
+# DATABASE_URL automatically. You still need to set JWT_SECRET (and the
+# optional OAuth vars) yourself in the web service's Environment tab.
+services:
+  - type: web
+    name: squadqueue-server
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: squadqueue-db
+          property: connectionString
+      - key: PGSSL
+        value: "true"
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        sync: false
+
+databases:
+  - name: squadqueue-db
+    plan: free
