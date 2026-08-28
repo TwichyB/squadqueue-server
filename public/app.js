@@ -74,16 +74,125 @@
     return e;
   }
   function intersect(a,b){ return a.filter(function(x){ return b.indexOf(x)>-1; }); }
+  function symDiff(a,b){
+    var onlyA = a.filter(function(x){ return b.indexOf(x)===-1; });
+    var onlyB = b.filter(function(x){ return a.indexOf(x)===-1; });
+    return onlyA.concat(onlyB);
+  }
   function dice(a,b){
     if(a.length===0 && b.length===0) return 0;
     return (2*intersect(a,b).length)/(a.length+b.length);
   }
+  var DAY_LABELS = DAYS.reduce(function(m,d){ m[d.id]=d.label; return m; }, {});
+  var TIME_FULL_LABELS = TIMES.reduce(function(m,t){ m[t.id]=t.label; return m; }, {});
   function showToast(msg){
     var t = document.getElementById("toast");
     t.textContent = msg;
     t.hidden = false;
     clearTimeout(showToast._tm);
     showToast._tm = setTimeout(function(){ t.hidden = true; }, 2200);
+  }
+
+  /* ---------------- notifications (in-app popup + browser desktop) ---------------- */
+  var MATCH_NOTIFY_THRESHOLD = 30;
+
+  function showNotification(title, text, onClick){
+    var stack = document.getElementById("notifStack");
+    var card = el("div",{class:"notif-card"});
+    card.appendChild(el("div",{class:"notif-icon"},["🔔"]));
+    var body = el("div",{class:"notif-body"});
+    body.appendChild(el("div",{class:"notif-title"},[title]));
+    body.appendChild(el("div",{class:"notif-text"},[text]));
+    card.appendChild(body);
+    var closeBtn = el("button",{class:"notif-close", type:"button", "aria-label":"ปิด"},["✕"]);
+    card.appendChild(closeBtn);
+
+    function remove(){ if(card.parentNode) card.parentNode.removeChild(card); }
+    closeBtn.addEventListener("click", function(e){ e.stopPropagation(); remove(); });
+    if(onClick){ card.addEventListener("click", function(){ remove(); onClick(); }); }
+
+    stack.appendChild(card);
+    setTimeout(remove, 6500);
+
+    if(window.Notification && Notification.permission === "granted" && document.hidden){
+      try{
+        var n = new Notification(title, {body:text});
+        n.onclick = function(){
+          window.focus();
+          if(onClick) onClick();
+          n.close();
+        };
+      }catch(e){}
+    }
+  }
+
+  function updateNotifToggleBtn(){
+    var btn = document.getElementById("notifToggleBtn");
+    if(!btn) return;
+    var granted = window.Notification && Notification.permission === "granted";
+    btn.classList.toggle("enabled", !!granted);
+    btn.title = granted ? "แจ้งเตือนเปิดอยู่" : "เปิดการแจ้งเตือน";
+  }
+
+  function toggleNotifPermission(){
+    if(!window.Notification){ showToast("เบราว์เซอร์นี้ไม่รองรับการแจ้งเตือนเดสก์ท็อป"); return; }
+    if(Notification.permission === "granted"){ showToast("เปิดการแจ้งเตือนอยู่แล้ว"); return; }
+    if(Notification.permission === "denied"){ showToast("การแจ้งเตือนถูกบล็อกไว้ ต้องไปเปิดในตั้งค่าเบราว์เซอร์เอง"); return; }
+    Notification.requestPermission().then(function(perm){
+      updateNotifToggleBtn();
+      showToast(perm === "granted" ? "เปิดการแจ้งเตือนแล้ว!" : "ไม่ได้เปิดการแจ้งเตือน");
+    });
+  }
+
+  function seenMatchesKey(){ return "squadqueue_seen_matches_" + (state.user ? state.user.id : "anon"); }
+  function loadSeenMatches(){
+    try{ var raw = localStorage.getItem(seenMatchesKey()); return raw ? new Set(JSON.parse(raw)) : new Set(); }
+    catch(e){ return new Set(); }
+  }
+  function saveSeenMatches(set){
+    try{ localStorage.setItem(seenMatchesKey(), JSON.stringify(Array.from(set))); }catch(e){}
+  }
+
+  function checkNewMatches(){
+    if(!state.profile) return;
+    var seen = loadSeenMatches();
+    var fresh = [];
+    state.candidates.forEach(function(c){
+      if(seen.has(c.id)) return;
+      var score = matchScore(state.profile, c);
+      if(score.total > MATCH_NOTIFY_THRESHOLD){
+        seen.add(c.id);
+        fresh.push({cand:c, score:score});
+      }
+    });
+    saveSeenMatches(seen);
+    if(fresh.length === 0) return;
+
+    fresh.sort(function(a,b){ return b.score.total - a.score.total; });
+    if(fresh.length === 1){
+      var f = fresh[0];
+      showNotification("เจอคู่ใหม่ที่เข้ากับคุณ! 🎮", f.cand.name + " ตรงกับคุณ " + f.score.total + "%", function(){ openChat(f.cand); });
+    } else {
+      var top = fresh[0];
+      showNotification("เจอคู่ใหม่ " + fresh.length + " คน! 🎮", "คะแนนสูงสุด: " + top.cand.name + " (" + top.score.total + "%)", function(){
+        var lobby = document.getElementById("viewLobby");
+        if(!lobby.hidden) lobby.scrollIntoView({behavior:"smooth"});
+      });
+    }
+  }
+
+  var candidatePollTimer = null;
+  function startCandidatePolling(){
+    stopCandidatePolling();
+    candidatePollTimer = setInterval(function(){
+      loadCandidates().then(function(){
+        checkNewMatches();
+        if(!document.getElementById("viewLobby").hidden) renderGrid();
+      }).catch(function(){});
+    }, 45000);
+  }
+  function stopCandidatePolling(){
+    if(candidatePollTimer){ clearInterval(candidatePollTimer); candidatePollTimer = null; }
   }
 
   /* ---------------- API helper ---------------- */
@@ -103,6 +212,8 @@
         if(!res.ok){
           var err = new Error(data.error || "เกิดข้อผิดพลาด");
           err.status = res.status;
+          err.needsVerification = data.needsVerification;
+          err.email = data.email;
           throw err;
         }
         return data;
@@ -121,8 +232,17 @@
       total: Math.round(total*100),
       breakdown: {
         games: Math.round(gameScore*100),
-        time: Math.round(((timeScore+dayScore)/2)*100),
+        day: Math.round(dayScore*100),
+        time: Math.round(timeScore*100),
         style: Math.round(styleScore*100)
+      },
+      mismatch: {
+        // เกม/สไตล์ ใช้คะแนนแบบ dice (สนใจทั้ง 2 ฝั่ง) จึงโชว์ส่วนต่างแบบสมมาตร
+        games: symDiff(user.games, cand.games),
+        styles: symDiff(user.styles, cand.styles),
+        // วัน/เวลา ใช้คะแนนจาก "ความครอบคลุมความต้องการของคุณ" จึงโชว์เฉพาะสิ่งที่คุณอยากได้แต่เขาไม่มี
+        days: user.days.filter(function(id){ return cand.days.indexOf(id)===-1; }).map(function(id){ return DAY_LABELS[id] || id; }),
+        times: user.times.filter(function(id){ return cand.times.indexOf(id)===-1; }).map(function(id){ return TIME_FULL_LABELS[id] || id; })
       }
     };
   }
@@ -337,6 +457,66 @@
     return a;
   }
 
+  /* ---------------- reputation voting (thumbs up/down, one active vote per target) ---------------- */
+  // The same candidate can have a reputation widget open in two places at
+  // once (their lobby card, and their chat header) — each is a separate DOM
+  // instance built from its own snapshot of the candidate. This registry
+  // lets a vote cast in either place refresh every other widget currently
+  // showing that same candidate, instead of only the one that was clicked.
+  // Stale entries (their element no longer in the document) are swept out
+  // lazily whenever a vote fires.
+  var repWidgetRegistry = [];
+  function notifyReputationChange(candId){
+    repWidgetRegistry = repWidgetRegistry.filter(function(w){ return document.body.contains(w.el); });
+    repWidgetRegistry.forEach(function(w){ if(w.candId === candId) w.refresh(); });
+  }
+
+  function buildReputationWidget(cand){
+    var wrap = el("div",{class:"rep-widget"});
+    var upBtn = el("button",{type:"button",class:"rep-btn rep-up",title:"เพิ่มคะแนนให้"},["👍"]);
+    var scoreEl = el("span",{class:"rep-score"},[String(cand.reputation)]);
+    var downBtn = el("button",{type:"button",class:"rep-btn rep-down",title:"ลดคะแนน"},["👎"]);
+
+    function refresh(){
+      var master = findCandidate(cand.id) || cand;
+      scoreEl.textContent = String(master.reputation);
+      upBtn.classList.toggle("active", master.myVote === 1);
+      downBtn.classList.toggle("active", master.myVote === -1);
+    }
+    refresh();
+    repWidgetRegistry.push({candId: cand.id, refresh: refresh, el: wrap});
+
+    function vote(value){
+      upBtn.disabled = true;
+      downBtn.disabled = true;
+      apiFetch("/users/"+cand.id+"/vote", {method:"POST", body:{value:value}}).then(function(data){
+        cand.reputation = data.reputation;
+        cand.myVote = data.myVote;
+        // Keep the canonical entry in state.candidates in sync too, in case
+        // this widget's cand is its own snapshot rather than that same object.
+        var master = findCandidate(cand.id);
+        if(master && master !== cand){
+          master.reputation = cand.reputation;
+          master.myVote = cand.myVote;
+        }
+        notifyReputationChange(cand.id);
+      }).catch(function(err){
+        showToast(err.message || "โหวตไม่สำเร็จ ลองใหม่อีกครั้ง");
+      }).finally(function(){
+        upBtn.disabled = false;
+        downBtn.disabled = false;
+      });
+    }
+
+    upBtn.addEventListener("click", function(e){ e.stopPropagation(); vote(1); });
+    downBtn.addEventListener("click", function(e){ e.stopPropagation(); vote(-1); });
+
+    wrap.appendChild(upBtn);
+    wrap.appendChild(scoreEl);
+    wrap.appendChild(downBtn);
+    return wrap;
+  }
+
   function renderCard(cand, score){
     var online = state.onlineIds.has(cand.id);
     var card = el("div",{class:"p-card"});
@@ -351,6 +531,7 @@
     }
     idBox.appendChild(nameRow);
     idBox.appendChild(el("div",{class:"p-card-status"},[(online?"ออนไลน์ตอนนี้":"ออฟไลน์")+" · "+GENDER_LABELS[cand.gender]]));
+    idBox.appendChild(buildReputationWidget(cand));
     top.appendChild(idBox);
     var dial = el("div",{class:"match-dial"});
     dial.style.setProperty("--pct", score.total);
@@ -371,15 +552,26 @@
     card.appendChild(metaRow);
 
     var breakdown = el("div",{class:"breakdown"});
-    [["เกม",score.breakdown.games],["เวลา",score.breakdown.time],["สไตล์",score.breakdown.style]].forEach(function(pair){
+    [
+      {label:"เกม", pct:score.breakdown.games, diff:score.mismatch.games},
+      {label:"วัน", pct:score.breakdown.day, diff:score.mismatch.days},
+      {label:"เวลา", pct:score.breakdown.time, diff:score.mismatch.times},
+      {label:"สไตล์", pct:score.breakdown.style, diff:score.mismatch.styles}
+    ].forEach(function(c){
       var row = el("div",{class:"breakdown-row"});
-      row.appendChild(el("span",{class:"breakdown-label"},[pair[0]]));
+      row.appendChild(el("span",{class:"breakdown-label"},[c.label]));
       var bar = el("div",{class:"breakdown-bar"});
       var fill = el("div",{class:"breakdown-fill"});
-      fill.style.width = Math.max(4,pair[1])+"%";
+      fill.style.width = Math.max(4,c.pct)+"%";
       bar.appendChild(fill);
       row.appendChild(bar);
+      row.appendChild(el("span",{class:"breakdown-pct"},[c.pct+"%"]));
       breakdown.appendChild(row);
+
+      var detail = c.diff.length
+        ? el("div",{class:"breakdown-detail"},["ไม่ตรงกัน: ", el("b",{},[c.diff.join(", ")])])
+        : el("div",{class:"breakdown-detail match-full"},["ตรงกันหมดทุกอย่าง ✓"]);
+      breakdown.appendChild(detail);
     });
     card.appendChild(breakdown);
 
@@ -449,6 +641,9 @@
     meChip.innerHTML = "";
     meChip.appendChild(makeAvatar(state.profile.name, 26));
     meChip.appendChild(el("span",{class:"me-name"},[state.profile.name]));
+    if(typeof state.profile.reputation === "number"){
+      meChip.appendChild(el("span",{class:"me-reputation",title:"คะแนน reputation ของคุณ"},["★ "+state.profile.reputation]));
+    }
   }
 
   /* ---------------- chat ---------------- */
@@ -464,6 +659,9 @@
     document.getElementById("chatName").textContent = cand.name;
     document.getElementById("chatStatus").textContent = (state.onlineIds.has(cand.id) ? "ออนไลน์ตอนนี้" : "ออฟไลน์") + " · " + GENDER_LABELS[cand.gender];
     document.getElementById("chatGoodToKnow").textContent = "“"+(cand.goodToKnow||"")+"”";
+    var chatRep = document.getElementById("chatReputation");
+    chatRep.innerHTML = "";
+    chatRep.appendChild(buildReputationWidget(cand));
 
     document.getElementById("chatPanel").hidden = false;
     document.getElementById("scrim").hidden = false;
@@ -533,11 +731,15 @@
 
     socket.on("chat:message", function(m){
       var otherId = m.from === "me" ? m.receiverId : m.senderId;
-      if(state.activeChatId === otherId){
+      var isOpenChat = state.activeChatId === otherId;
+      if(isOpenChat){
         appendMessage(m);
-      } else if(m.from === "them"){
+      }
+      if(m.from === "them" && (!isOpenChat || document.hidden)){
         var cand = findCandidate(otherId);
-        showToast("ข้อความใหม่จาก " + (cand ? cand.name : "เพื่อนใหม่"));
+        showNotification("ข้อความใหม่จาก " + (cand ? cand.name : "เพื่อนใหม่"), m.text, function(){
+          if(cand) openChat(cand);
+        });
       }
     });
   }
@@ -613,10 +815,18 @@
 
       submitBtn.disabled = true;
       var path = mode === "signup" ? "/auth/signup" : "/auth/login";
-      apiFetch(path, {method:"POST", body:{email:email, password:pass}}).then(function(){
-        showToast(mode === "signup" ? "สมัครสมาชิกสำเร็จ!" : "เข้าสู่ระบบสำเร็จ!");
-        afterLogin();
+      apiFetch(path, {method:"POST", body:{email:email, password:pass}}).then(function(data){
+        if(mode === "signup"){
+          showVerificationPending(email);
+        } else {
+          showToast("เข้าสู่ระบบสำเร็จ!");
+          afterLogin();
+        }
       }).catch(function(err){
+        if(err.needsVerification){
+          showVerificationPending(err.email || email);
+          return;
+        }
         showError(err.message || "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
       }).finally(function(){
         submitBtn.disabled = false;
@@ -624,6 +834,38 @@
     });
 
     mount.appendChild(form);
+  }
+
+  function showVerificationPending(email){
+    document.getElementById("tabLogin").classList.remove("active");
+    document.getElementById("tabSignup").classList.remove("active");
+
+    var mount = document.getElementById("authFormMount");
+    mount.innerHTML = "";
+
+    var box = el("div", {});
+    box.appendChild(el("p", {style:"color:var(--text-muted);font-size:13.5px;line-height:1.6;margin-bottom:18px;"}, [
+      "ส่งอีเมลยืนยันไปที่ ", el("b",{style:"color:var(--text);"},[email]), " แล้ว กรุณาเปิดกล่องจดหมายแล้วกดลิงก์ยืนยันก่อนเข้าสู่ระบบ (เช็คโฟลเดอร์สแปมด้วยถ้าไม่เจอ)"
+    ]));
+
+    var resendBtn = el("button", {class:"btn btn-ghost btn-block", type:"button"}, ["ส่งอีเมลยืนยันอีกครั้ง"]);
+    resendBtn.addEventListener("click", function(){
+      resendBtn.disabled = true;
+      apiFetch("/auth/resend-verification", {method:"POST", body:{email:email}}).then(function(data){
+        showToast(data.message || "ส่งอีเมลยืนยันใหม่แล้ว");
+      }).catch(function(err){
+        showToast(err.message || "ส่งอีเมลไม่สำเร็จ");
+      }).finally(function(){
+        resendBtn.disabled = false;
+      });
+    });
+    box.appendChild(resendBtn);
+
+    var backBtn = el("button", {class:"btn btn-ghost btn-block", type:"button", style:"margin-top:10px;"}, ["กลับไปหน้าเข้าสู่ระบบ"]);
+    backBtn.addEventListener("click", function(){ renderAuthForm("login"); });
+    box.appendChild(backBtn);
+
+    mount.appendChild(box);
   }
 
   function loginWithProvider(provider){
@@ -646,7 +888,11 @@
     document.getElementById("topbarActions").hidden = false;
     renderMeChip();
     connectSocket();
-    loadCandidates().then(renderLobby).catch(function(err){
+    loadCandidates().then(function(){
+      renderLobby();
+      checkNewMatches();
+      startCandidatePolling();
+    }).catch(function(err){
       showToast(err.message || "โหลดรายชื่อไม่สำเร็จ");
     });
   }
@@ -678,6 +924,7 @@
 
   function logout(){
     apiFetch("/auth/logout", {method:"POST"}).catch(function(){}).finally(function(){
+      stopCandidatePolling();
       disconnectSocket();
       state.user = null;
       state.profile = null;
@@ -690,14 +937,22 @@
     var params = new URLSearchParams(window.location.search);
     var login = params.get("login");
     var loginError = params.get("loginError");
+    var verified = params.get("verified");
+    var verifyError = params.get("verifyError");
     if(login){
-      showToast("เข้าสู่ระบบด้วย " + (login === "discord" ? "Discord" : "Facebook") + " สำเร็จ!");
+      showToast("เข้าสู่ระบบด้วย Discord สำเร็จ!");
     } else if(loginError){
       showToast(loginError);
+    } else if(verified){
+      showToast("ยืนยันอีเมลสำเร็จ! เข้าสู่ระบบให้อัตโนมัติแล้ว");
+    } else if(verifyError){
+      showToast(verifyError);
     }
-    if(login || loginError){
+    if(login || loginError || verified || verifyError){
       params.delete("login");
       params.delete("loginError");
+      params.delete("verified");
+      params.delete("verifyError");
       var qs = params.toString();
       window.history.replaceState({}, "", window.location.pathname + (qs ? "?"+qs : ""));
     }
@@ -731,12 +986,12 @@
 
   document.getElementById("tabLogin").addEventListener("click", function(){ renderAuthForm("login"); });
   document.getElementById("tabSignup").addEventListener("click", function(){ renderAuthForm("signup"); });
-  document.getElementById("fbLoginBtn").addEventListener("click", function(){ loginWithProvider("facebook"); });
   document.getElementById("discordLoginBtn").addEventListener("click", function(){ loginWithProvider("discord"); });
   document.getElementById("logoutBtn").addEventListener("click", logout);
   document.getElementById("themeToggleBtn").addEventListener("click", function(){
     applyTheme(getCurrentTheme() === "dark" ? "light" : "dark");
   });
+  document.getElementById("notifToggleBtn").addEventListener("click", toggleNotifPermission);
   document.getElementById("editProfileBtn").addEventListener("click", function(){
     buildForm(document.getElementById("modalFormMount"), state.profile, function(data){
       return apiFetch("/profile", {method:"PUT", body:data}).then(function(){
@@ -746,6 +1001,7 @@
         showToast("อัปเดตโปรไฟล์แล้ว");
         renderMeChip();
         renderLobby();
+        checkNewMatches();
       }).catch(function(err){
         showToast(err.message || "อัปเดตโปรไฟล์ไม่สำเร็จ");
       });
@@ -778,5 +1034,6 @@
   document.getElementById("gameFilter").addEventListener("change", renderGrid);
   document.getElementById("sortFilter").addEventListener("change", renderGrid);
 
+  updateNotifToggleBtn();
   boot();
 })();

@@ -1,4 +1,6 @@
 -- SquadQueue database schema. Run once with `npm run migrate`.
+-- Safe to re-run: every statement is idempotent (IF NOT EXISTS), so running
+-- this against an existing database only adds what's missing.
 
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
@@ -9,6 +11,14 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (provider, provider_id)
 );
+
+-- Email verification. DEFAULT true on the ALTER so any account that already
+-- existed before this feature shipped is grandfathered in as verified;
+-- the signup route explicitly passes false for new local-signup accounts.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expires_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users (verification_token);
 
 CREATE TABLE IF NOT EXISTS profiles (
   user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -23,6 +33,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Every player starts at 100 reputation; it moves up/down as other players
+-- thumbs-up / thumbs-down them (see reputation_votes below).
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS reputation INTEGER NOT NULL DEFAULT 100;
+
 CREATE TABLE IF NOT EXISTS messages (
   id SERIAL PRIMARY KEY,
   sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -33,3 +47,19 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_sender_pair ON messages (sender_id, receiver_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_receiver_pair ON messages (receiver_id, sender_id, created_at);
+
+-- One row per (voter, target) pair caps each person to a single active vote
+-- on any given user (enforced by the primary key, not just app logic) while
+-- still letting them change their mind: casting a new vote UPDATEs the row,
+-- and re-clicking the same thumb DELETEs it (see src/routes/reputation.js).
+CREATE TABLE IF NOT EXISTS reputation_votes (
+  voter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  target_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  value SMALLINT NOT NULL CHECK (value IN (1, -1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (voter_id, target_id),
+  CHECK (voter_id <> target_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reputation_votes_target ON reputation_votes (target_id);

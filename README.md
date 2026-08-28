@@ -49,7 +49,7 @@ squadqueue-server/
    ```
    แล้วเปิดเบราว์เซอร์ไปที่ `http://localhost:3000`
 
-ปุ่ม "เข้าสู่ระบบด้วย Facebook/Discord" จะยังใช้ไม่ได้จนกว่าจะตั้งค่า OAuth ตามขั้นตอนด้านล่าง (ถ้าไม่ตั้งค่า ปุ่มจะแจ้งเตือนเฉยๆ ไม่ error)
+ปุ่ม "เข้าสู่ระบบด้วย Discord" จะยังใช้ไม่ได้จนกว่าจะตั้งค่า OAuth ตามขั้นตอนด้านล่าง (ถ้าไม่ตั้งค่า ปุ่มจะแจ้งเตือนเฉยๆ ไม่ error)
 
 ## Deploy ขึ้นใช้งานจริง
 
@@ -69,6 +69,24 @@ squadqueue-server/
 - **Railway** (railway.app): สร้างโปรเจกต์ใหม่ → deploy จาก GitHub repo → เพิ่ม Postgres plugin → ตั้งค่า env vars เหมือนใน `.env.example` → รัน `npm run migrate` ผ่าน Railway shell
 - **Vercel + ฐานข้อมูลแยก (Supabase/Neon)**: เหมาะกับ frontend แบบ static แต่ตัวเซิร์ฟเวอร์นี้เป็น Node/Express ที่ต้องมีการเชื่อมต่อ WebSocket (Socket.IO) ค้างไว้ตลอด ซึ่ง Vercel serverless ไม่รองรับดีนัก แนะนำให้ deploy ตัวเซิร์ฟเวอร์บน Render/Railway/Fly.io แทน แล้วใช้ Supabase หรือ Neon เป็นฐานข้อมูล Postgres ก็ได้ (แค่เปลี่ยนค่า `DATABASE_URL`)
 
+## ตั้งค่ายืนยันอีเมล (Gmail SMTP)
+
+ตอนนี้การสมัครสมาชิกด้วยอีเมล/รหัสผ่านต้องกดยืนยันลิงก์ในอีเมลก่อนถึงจะเข้าสู่ระบบได้ (บัญชีที่ล็อกอินผ่าน Discord ไม่ต้องยืนยันซ้ำ เพราะผู้ให้บริการยืนยันอีเมลมาให้แล้ว)
+
+1. เปิดการยืนยัน 2 ขั้นตอน (2-Step Verification) ให้บัญชี Gmail ที่จะใช้ส่งอีเมลก่อน ที่ https://myaccount.google.com/security (ถ้าเปิดไว้แล้วข้ามขั้นตอนนี้ได้)
+2. ไปที่ https://myaccount.google.com/apppasswords → เลือกประเภท "Mail" → ตั้งชื่ออะไรก็ได้ (เช่น "SquadQueue") → กด Create จะได้รหัสผ่าน 16 ตัวอักษรมา (ไม่ใช่รหัสผ่าน Gmail ปกติ)
+3. นำค่าที่ได้ไปใส่ใน `.env` (หรือ Environment ของ Render):
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_SECURE=false
+   SMTP_USER=อีเมล_gmail_ของคุณ@gmail.com
+   SMTP_PASS=รหัส16ตัวที่ได้จาก App Password (ไม่มีเว้นวรรค)
+   SMTP_FROM=SquadQueue <อีเมล_gmail_ของคุณ@gmail.com>
+   ```
+4. ตั้งค่า `APP_BASE_URL` ให้ตรงกับโดเมนจริงที่ผู้ใช้เข้าเว็บ (เช่น `https://squadqueue-server.onrender.com`) — ค่านี้สำคัญมาก เพราะถูกใช้สร้างลิงก์ยืนยันในอีเมล ถ้าตั้งผิดหรือไม่ตั้งเลย ลิงก์อาจชี้ไปผิดโดเมน (โดยเฉพาะเมื่อรันหลัง proxy อย่าง Render)
+5. ถ้าไม่ตั้งค่า SMTP ไว้ (ปล่อย `SMTP_USER`/`SMTP_PASS` ว่าง) เซิร์ฟเวอร์จะไม่ส่งอีเมลจริง แต่จะพิมพ์ลิงก์ยืนยันออกทาง console log แทน — สะดวกสำหรับทดสอบในเครื่อง แต่ผู้ใช้จริงจะเข้าระบบไม่ได้ถ้าไม่มีใครส่งลิงก์ให้
+
 ## ตั้งค่า Login ด้วย Discord (จริง ไม่ใช่จำลอง)
 
 1. ไปที่ https://discord.com/developers/applications → New Application
@@ -81,18 +99,6 @@ squadqueue-server/
    DISCORD_REDIRECT_URI=https://โดเมนของคุณ/api/auth/discord/callback
    ```
 5. รีสตาร์ทเซิร์ฟเวอร์ ปุ่ม "เข้าสู่ระบบด้วย Discord" จะพาไปหน้ายืนยันตัวตนของ Discord จริง
-
-## ตั้งค่า Login ด้วย Facebook (จริง ไม่ใช่จำลอง)
-
-1. ไปที่ https://developers.facebook.com/ → สร้างแอปใหม่ → เพิ่มผลิตภัณฑ์ **Facebook Login**
-2. ในตั้งค่า Facebook Login → Valid OAuth Redirect URIs ให้ใส่: `https://โดเมนของคุณ/api/auth/facebook/callback`
-3. คัดลอก App ID และ App Secret จากหน้า Settings → Basic ไปใส่ใน `.env`:
-   ```
-   FACEBOOK_CLIENT_ID=...
-   FACEBOOK_CLIENT_SECRET=...
-   FACEBOOK_REDIRECT_URI=https://โดเมนของคุณ/api/auth/facebook/callback
-   ```
-4. **ข้อควรระวัง**: ขณะที่แอป Facebook ยังอยู่ในโหมด "Development" จะมีแค่บัญชีที่คุณเพิ่มเป็น Tester/Developer ในหน้า Roles เท่านั้นที่ล็อกอินผ่านได้ ถ้าต้องการให้ใครก็ล็อกอินได้ ต้องส่งแอปให้ Facebook ตรวจสอบ (App Review) เพื่อเปลี่ยนเป็นโหมด Live
 
 ## ความปลอดภัยที่ทำไว้ให้แล้ว
 
