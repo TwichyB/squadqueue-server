@@ -1,25 +1,19 @@
-const nodemailer = require("nodemailer");
-
-let transporter = null;
-let triedInit = false;
-
-function getTransporter() {
-  if (triedInit) return transporter;
-  triedInit = true;
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    return null;
-  }
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === "true",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  });
-  return transporter;
-}
+// Sends transactional email through the Resend HTTP API (https://resend.com)
+// instead of SMTP. We call the REST API directly with fetch rather than
+// adding the "resend" npm package, since Node 18+ (this project's minimum)
+// has fetch built in and the only thing we need is one POST request.
+//
+// Why not SMTP/Gmail: Render's free web service plan blocks all outbound
+// traffic to SMTP ports (25/465/587), so a direct connection to
+// smtp.gmail.com times out no matter how correct the credentials are.
+// Resend's API rides over plain HTTPS (443), which isn't blocked.
+//
+// Note: without a verified sending domain on Resend, the account can only
+// deliver to the email address the Resend account itself was signed up
+// with — sending to any other address returns a 403 from Resend's API.
+// That's a Resend-side restriction, not a bug here; verifying a domain at
+// https://resend.com/domains lifts it for real end users.
+const RESEND_API_URL = "https://api.resend.com/emails";
 
 function verificationEmailHtml(verifyUrl) {
   return (
@@ -36,17 +30,34 @@ function verificationEmailHtml(verifyUrl) {
 }
 
 async function sendVerificationEmail(toEmail, verifyUrl) {
-  const t = getTransporter();
-  if (!t) {
-    console.log("[mailer] SMTP not configured — verification link for " + toEmail + ": " + verifyUrl);
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.log("[mailer] RESEND_API_KEY not configured — verification link for " + toEmail + ": " + verifyUrl);
     return;
   }
-  await t.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: toEmail,
-    subject: "ยืนยันอีเมลของคุณ - SquadQueue",
-    html: verificationEmailHtml(verifyUrl)
+
+  const from = process.env.RESEND_FROM || "SquadQueue <onboarding@resend.dev>";
+
+  const res = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      from: from,
+      to: [toEmail],
+      subject: "ยืนยันอีเมลของคุณ - SquadQueue",
+      html: verificationEmailHtml(verifyUrl)
+    })
   });
+
+  if (!res.ok) {
+    const body = await res.text().catch(function () {
+      return "";
+    });
+    throw new Error("Resend API error " + res.status + ": " + body);
+  }
 }
 
 module.exports = { sendVerificationEmail };
