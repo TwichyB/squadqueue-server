@@ -4,11 +4,12 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const pool = require("../db");
 const { requireAuth } = require("../middleware/auth");
-const { sendVerificationEmail } = require("../mailer");
+const { sendVerificationEmail, sendPasswordResetEmail } = require("../mailer");
 
 const router = express.Router();
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VERIFICATION_TOKEN_TTL_MS = 60 * 60 * 1000;
+const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 function signToken(userId) {
   return jwt.sign({ uid: userId }, process.env.JWT_SECRET, { expiresIn: "30d" });
@@ -161,6 +162,79 @@ router.post("/resend-verification", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "ส่งอีเมลไม่สำเร็จ ลองใหม่อีกครั้ง" });
+  }
+});
+
+router.post("/forgot-password", async (req, res) => {
+  const email = String((req.body && req.body.email) || "").trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: "กรอกอีเมลให้ถูกต้อง" });
+
+  // Same enumeration-safety approach as /resend-verification: always return
+  // the identical generic message whether or not the account exists, so this
+  // endpoint can't be used to check which emails have accounts here.
+  const genericMessage = "ถ้าอีเมลนี้อยู่ในระบบ จะส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้แล้ว";
+
+  try {
+    const result = await pool.query(
+      "SELECT id, email FROM users WHERE email = $1 AND provider = 'local'",
+      [email]
+    );
+    const user = result.rows[0];
+    if (user) {
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+      await pool.query(
+        "UPDATE users SET reset_token = $1, reset_token_expires_at = $2 WHERE id = $3",
+        [token, expiresAt, user.id]
+      );
+      const resetUrl = getBaseUrl(req) + "/?resetToken=" + token;
+      try {
+        await sendPasswordResetEmail(user.email, resetUrl);
+      } catch (err) {
+        console.error("Failed to send password reset email:", err);
+      }
+    }
+    res.json({ ok: true, message: genericMessage });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "ส่งอีเมลไม่สำเร็จ ลองใหม่อีกครั้ง" });
+  }
+});
+
+router.post("/reset-password", async (req, res) => {
+  const token = String((req.body && req.body.token) || "");
+  const password = String((req.body && req.body.password) || "");
+
+  if (!token) return res.status(400).json({ error: "ลิงก์ตั้งรหัสผ่านใหม่ไม่ถูกต้อง" });
+  if (password.length < 6) return res.status(400).json({ error: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร" });
+
+  try {
+    const result = await pool.query(
+      "SELECT id, reset_token_expires_at FROM users WHERE reset_token = $1",
+      [token]
+    );
+    const user = result.rows[0];
+    if (!user) {
+      return res.status(400).json({ error: "ลิงก์ตั้งรหัสผ่านใหม่ไม่ถูกต้องหรือถูกใช้ไปแล้ว" });
+    }
+    if (user.reset_token_expires_at && new Date(user.reset_token_expires_at) < new Date()) {
+      return res.status(400).json({ error: "ลิงก์ตั้งรหัสผ่านใหม่หมดอายุแล้ว กรุณาขอลิงก์ใหม่" });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query(
+      // Resetting the password also proves the person controls this inbox,
+      // same as clicking the email-verification link — so mark it verified
+      // too, in case this account somehow reached this point unverified.
+      "UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires_at = NULL, email_verified = true WHERE id = $2",
+      [hash, user.id]
+    );
+
+    setAuthCookie(res, signToken(user.id));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "ตั้งรหัสผ่านใหม่ไม่สำเร็จ ลองใหม่อีกครั้ง" });
   }
 });
 

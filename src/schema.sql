@@ -20,6 +20,13 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token_expires_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users (verification_token);
 
+-- Forgot-password flow. Same shape as email verification above: a random
+-- token + expiry, emailed as a link, cleared once used (or once a new one
+-- is issued).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users (reset_token);
+
 CREATE TABLE IF NOT EXISTS profiles (
   user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,

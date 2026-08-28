@@ -792,6 +792,12 @@
       confirmInput = el("input",{class:"text-input", type:"password", placeholder:"พิมพ์รหัสผ่านอีกครั้ง", autocomplete:"new-password"});
       confirmField.appendChild(confirmInput);
       form.appendChild(confirmField);
+    } else {
+      var forgotWrap = el("div",{style:"text-align:right;margin-bottom:22px;"});
+      var forgotLink = el("button",{class:"auth-forgot-link", type:"button"},["ลืมรหัสผ่าน?"]);
+      forgotLink.addEventListener("click", function(){ renderForgotPasswordForm(emailInput.value.trim()); });
+      forgotWrap.appendChild(forgotLink);
+      form.appendChild(forgotWrap);
     }
 
     var errorBox = el("div",{class:"form-error"},[""]);
@@ -866,6 +872,120 @@
     box.appendChild(backBtn);
 
     mount.appendChild(box);
+  }
+
+  function renderForgotPasswordForm(prefillEmail){
+    document.getElementById("tabLogin").classList.remove("active");
+    document.getElementById("tabSignup").classList.remove("active");
+
+    var mount = document.getElementById("authFormMount");
+    mount.innerHTML = "";
+
+    var form = el("form", {});
+    form.appendChild(el("p", {style:"color:var(--text-muted);font-size:13.5px;line-height:1.6;margin-bottom:18px;"}, [
+      "กรอกอีเมลที่ใช้สมัคร แล้วเราจะส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้"
+    ]));
+
+    var emailField = el("div",{class:"field"});
+    emailField.appendChild(el("label",{class:"field-label"},["อีเมล"]));
+    var emailInput = el("input",{class:"text-input", type:"email", placeholder:"you@email.com", autocomplete:"email", value: prefillEmail || ""});
+    emailField.appendChild(emailInput);
+    form.appendChild(emailField);
+
+    var errorBox = el("div",{class:"form-error"},[""]);
+    form.appendChild(errorBox);
+    function showError(msg){ errorBox.textContent = msg; errorBox.classList.add("show"); }
+
+    var actions = el("div",{class:"form-actions"});
+    var submitBtn = el("button",{class:"btn btn-primary btn-block", type:"submit"},["ส่งลิงก์ตั้งรหัสผ่านใหม่"]);
+    actions.appendChild(submitBtn);
+    form.appendChild(actions);
+
+    form.addEventListener("submit", function(e){
+      e.preventDefault();
+      errorBox.classList.remove("show");
+      var email = emailInput.value.trim().toLowerCase();
+      if(!email || !EMAIL_RE.test(email)){ showError("กรอกอีเมลให้ถูกต้อง"); return; }
+
+      submitBtn.disabled = true;
+      apiFetch("/auth/forgot-password", {method:"POST", body:{email:email}}).then(function(data){
+        mount.innerHTML = "";
+        var box = el("div", {});
+        box.appendChild(el("p", {style:"color:var(--text-muted);font-size:13.5px;line-height:1.6;margin-bottom:18px;"}, [
+          data.message || "ถ้าอีเมลนี้อยู่ในระบบ จะส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้แล้ว"
+        ]));
+        var backBtn = el("button", {class:"btn btn-ghost btn-block", type:"button"}, ["กลับไปหน้าเข้าสู่ระบบ"]);
+        backBtn.addEventListener("click", function(){ renderAuthForm("login"); });
+        box.appendChild(backBtn);
+        mount.appendChild(box);
+      }).catch(function(err){
+        showError(err.message || "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
+        submitBtn.disabled = false;
+      });
+    });
+
+    mount.appendChild(form);
+
+    var backLink = el("button", {class:"btn btn-ghost btn-block", type:"button", style:"margin-top:10px;"}, ["กลับไปหน้าเข้าสู่ระบบ"]);
+    backLink.addEventListener("click", function(){ renderAuthForm("login"); });
+    mount.appendChild(backLink);
+  }
+
+  function renderResetPasswordForm(token){
+    document.getElementById("tabLogin").classList.remove("active");
+    document.getElementById("tabSignup").classList.remove("active");
+
+    var mount = document.getElementById("authFormMount");
+    mount.innerHTML = "";
+
+    var form = el("form", {});
+    form.appendChild(el("p", {style:"color:var(--text-muted);font-size:13.5px;line-height:1.6;margin-bottom:18px;"}, [
+      "ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ"
+    ]));
+
+    var passField = el("div",{class:"field"});
+    passField.appendChild(el("label",{class:"field-label"},["รหัสผ่านใหม่"]));
+    var passInput = el("input",{class:"text-input", type:"password", placeholder:"อย่างน้อย 6 ตัวอักษร", autocomplete:"new-password"});
+    passField.appendChild(passInput);
+    form.appendChild(passField);
+
+    var confirmField = el("div",{class:"field"});
+    confirmField.appendChild(el("label",{class:"field-label"},["ยืนยันรหัสผ่านใหม่"]));
+    var confirmInput = el("input",{class:"text-input", type:"password", placeholder:"พิมพ์รหัสผ่านอีกครั้ง", autocomplete:"new-password"});
+    confirmField.appendChild(confirmInput);
+    form.appendChild(confirmField);
+
+    var errorBox = el("div",{class:"form-error"},[""]);
+    form.appendChild(errorBox);
+    function showError(msg){ errorBox.textContent = msg; errorBox.classList.add("show"); }
+
+    var actions = el("div",{class:"form-actions"});
+    var submitBtn = el("button",{class:"btn btn-primary btn-block", type:"submit"},["ตั้งรหัสผ่านใหม่"]);
+    actions.appendChild(submitBtn);
+    form.appendChild(actions);
+
+    form.addEventListener("submit", function(e){
+      e.preventDefault();
+      errorBox.classList.remove("show");
+      var pass = passInput.value;
+      if(!pass || pass.length < 6){ showError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"); return; }
+      if(pass !== confirmInput.value){ showError("รหัสผ่านยืนยันไม่ตรงกัน"); return; }
+
+      submitBtn.disabled = true;
+      apiFetch("/auth/reset-password", {method:"POST", body:{token:token, password:pass}}).then(function(){
+        showToast("ตั้งรหัสผ่านใหม่สำเร็จ! เข้าสู่ระบบให้อัตโนมัติแล้ว");
+        afterLogin();
+      }).catch(function(err){
+        showError(err.message || "ตั้งรหัสผ่านใหม่ไม่สำเร็จ ลองขอลิงก์ใหม่อีกครั้ง");
+        submitBtn.disabled = false;
+      });
+    });
+
+    mount.appendChild(form);
+
+    var backLink = el("button", {class:"btn btn-ghost btn-block", type:"button", style:"margin-top:10px;"}, ["กลับไปหน้าเข้าสู่ระบบ"]);
+    backLink.addEventListener("click", function(){ renderAuthForm("login"); });
+    mount.appendChild(backLink);
   }
 
   function loginWithProvider(provider){
@@ -958,8 +1078,27 @@
     }
   }
 
+  function consumeResetTokenParam(){
+    var params = new URLSearchParams(window.location.search);
+    var resetToken = params.get("resetToken");
+    if(!resetToken) return null;
+    params.delete("resetToken");
+    var qs = params.toString();
+    window.history.replaceState({}, "", window.location.pathname + (qs ? "?"+qs : ""));
+    return resetToken;
+  }
+
   function boot(){
     handleOAuthRedirectParams();
+    var resetToken = consumeResetTokenParam();
+    if(resetToken){
+      document.getElementById("viewAuth").hidden = false;
+      document.getElementById("viewOnboarding").hidden = true;
+      document.getElementById("viewLobby").hidden = true;
+      document.getElementById("topbarActions").hidden = true;
+      renderResetPasswordForm(resetToken);
+      return;
+    }
     apiFetch("/auth/me").then(function(data){
       state.user = data.user;
       state.profile = data.profile;

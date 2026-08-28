@@ -33,13 +33,27 @@ function verificationEmailHtml(verifyUrl) {
   );
 }
 
-async function sendVerificationEmail(toEmail, verifyUrl) {
+function resetPasswordEmailHtml(resetUrl) {
+  return (
+    '<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:8px;">' +
+    '<h2 style="color:#171b24;">รีเซ็ตรหัสผ่าน MosUP</h2>' +
+    '<p style="color:#444;font-size:14px;line-height:1.6;">มีคำขอตั้งรหัสผ่านใหม่สำหรับบัญชีนี้ กดปุ่มด้านล่างเพื่อตั้งรหัสผ่านใหม่ ลิงก์นี้จะหมดอายุใน 1 ชั่วโมง</p>' +
+    '<p style="margin:24px 0;">' +
+    '<a href="' + resetUrl + '" style="display:inline-block;background:#d85f22;color:#ffffff;padding:12px 26px;border-radius:999px;text-decoration:none;font-weight:bold;font-size:14px;">ตั้งรหัสผ่านใหม่</a>' +
+    "</p>" +
+    '<p style="color:#888;font-size:12px;line-height:1.5;">ถ้ากดปุ่มไม่ได้ ให้คัดลอกลิงก์นี้ไปวางในเบราว์เซอร์แทน:<br>' + resetUrl + "</p>" +
+    '<p style="color:#aaa;font-size:11px;margin-top:24px;">ถ้าคุณไม่ได้ขอรีเซ็ตรหัสผ่าน สามารถเพิกเฉยต่ออีเมลนี้ได้เลย รหัสผ่านเดิมของคุณจะไม่ถูกเปลี่ยนแปลง</p>' +
+    "</div>"
+  );
+}
+
+async function sendViaBrevo(toEmail, subject, html) {
   const apiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.BREVO_SENDER_EMAIL;
   const senderName = process.env.BREVO_SENDER_NAME || "MosUP";
   if (!apiKey || !senderEmail) {
-    console.log("[mailer] Brevo not configured — verification link for " + toEmail + ": " + verifyUrl);
-    return;
+    console.log("[mailer] Brevo not configured — link for " + toEmail + " (" + subject + ")");
+    return false;
   }
 
   const res = await fetch(BREVO_API_URL, {
@@ -52,8 +66,8 @@ async function sendVerificationEmail(toEmail, verifyUrl) {
     body: JSON.stringify({
       sender: { email: senderEmail, name: senderName },
       to: [{ email: toEmail }],
-      subject: "ยืนยันอีเมลของคุณ - MosUP",
-      htmlContent: verificationEmailHtml(verifyUrl)
+      subject: subject,
+      htmlContent: html
     })
   });
 
@@ -63,6 +77,17 @@ async function sendVerificationEmail(toEmail, verifyUrl) {
     });
     throw new Error("Brevo API error " + res.status + ": " + body);
   }
+  return true;
 }
 
-module.exports = { sendVerificationEmail };
+async function sendVerificationEmail(toEmail, verifyUrl) {
+  const sent = await sendViaBrevo(toEmail, "ยืนยันอีเมลของคุณ - MosUP", verificationEmailHtml(verifyUrl));
+  if (!sent) console.log("[mailer] verification link for " + toEmail + ": " + verifyUrl);
+}
+
+async function sendPasswordResetEmail(toEmail, resetUrl) {
+  const sent = await sendViaBrevo(toEmail, "รีเซ็ตรหัสผ่านของคุณ - MosUP", resetPasswordEmailHtml(resetUrl));
+  if (!sent) console.log("[mailer] password reset link for " + toEmail + ": " + resetUrl);
+}
+
+module.exports = { sendVerificationEmail, sendPasswordResetEmail };
