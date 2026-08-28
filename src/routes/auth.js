@@ -8,7 +8,7 @@ const { sendVerificationEmail } = require("../mailer");
 
 const router = express.Router();
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const VERIFICATION_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 function signToken(userId) {
   return jwt.sign({ uid: userId }, process.env.JWT_SECRET, { expiresIn: "30d" });

@@ -25,7 +25,7 @@ function verificationEmailHtml(verifyUrl) {
   return (
     '<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:8px;">' +
     '<h2 style="color:#171b24;">ยินดีต้อนรับสู่ SquadQueue!</h2>' +
-    '<p style="color:#444;font-size:14px;line-height:1.6;">กดปุ่มด้านล่างเพื่อยืนยันอีเมลของคุณ ลิงก์นี้จะหมดอายุใน 24 ชั่วโมง</p>' +
+    '<p style="color:#444;font-size:14px;line-height:1.6;">กดปุ่มด้านล่างเพื่อยืนยันอีเมลของคุณ ลิงก์นี้จะหมดอายุใน 1 ชั่วโมง</p>' +
     '<p style="margin:24px 0;">' +
     '<a href="' + verifyUrl + '" style="display:inline-block;background:#d85f22;color:#ffffff;padding:12px 26px;border-radius:999px;text-decoration:none;font-weight:bold;font-size:14px;">ยืนยันอีเมล</a>' +
     "</p>" +
