@@ -787,6 +787,7 @@
     var savedMinMatch = Math.min(100, Math.max(0, Math.round((profile.minMatchPct || 0) / 10) * 10));
     minMatchFilter.value = String(savedMinMatch);
     updateMinMatchLabel(savedMinMatch);
+    updateMinMatchTrackFill(minMatchFilter);
 
     renderGrid();
   }
@@ -794,6 +795,14 @@
   function updateMinMatchLabel(pct){
     var label = document.getElementById("minMatchValue");
     if(label) label.textContent = pct > 0 ? (pct + "%+") : "ไม่กำหนด";
+  }
+
+  // ทำให้เส้นหลอดเลื่อนมีสีไล่ตามค่า % ที่ตั้งไว้ ไม่ใช่แค่จุดกลมสีส้ม
+  // (ต้องคำนวณด้วย JS เพราะ CSS ล้วนๆ ไม่รู้ค่าปัจจุบันของ input[type=range])
+  function updateMinMatchTrackFill(el){
+    var min = parseFloat(el.min) || 0, max = parseFloat(el.max) || 100, val = parseFloat(el.value) || 0;
+    var pct = max > min ? Math.min(100, Math.max(0, (val - min) / (max - min) * 100)) : 0;
+    el.style.background = "linear-gradient(to right, var(--accent) " + pct + "%, var(--border) " + pct + "%)";
   }
 
   function updateMinMatchPct(pct){
@@ -1498,8 +1507,9 @@
   document.getElementById("gameFilter").addEventListener("change", renderGrid);
   document.getElementById("sortFilter").addEventListener("change", renderGrid);
   document.getElementById("minMatchFilter").addEventListener("input", function(e){
-    // อัปเดตตัวเลขที่โชว์ทันทีระหว่างลาก แต่ยังไม่ยิงไปเซิร์ฟเวอร์ (เหมือนปรับเสียง)
+    // อัปเดตตัวเลขที่โชว์และสีเส้นทันทีระหว่างลาก แต่ยังไม่ยิงไปเซิร์ฟเวอร์ (เหมือนปรับเสียง)
     updateMinMatchLabel(parseInt(e.target.value, 10) || 0);
+    updateMinMatchTrackFill(e.target);
   });
   document.getElementById("minMatchFilter").addEventListener("change", function(e){
     // ยิงอัปเดตไปเซิร์ฟเวอร์เมื่อปล่อยมือ/เปลี่ยนค่าเสร็จแล้ว

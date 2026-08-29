@@ -340,6 +340,9 @@ textarea.text-input{resize:vertical;min-height:70px;}
   width:120px;height:4px;border-radius:999px;background:var(--border);
   appearance:none;-webkit-appearance:none;outline:none;cursor:pointer;
 }
+.min-match-slider input[type="range"]::-webkit-slider-runnable-track{
+  height:4px;border-radius:999px;background:transparent;
+}
 .min-match-slider input[type="range"]::-webkit-slider-thumb{
   appearance:none;-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
   background:var(--accent);border:2px solid var(--accent-contrast);cursor:pointer;
@@ -351,6 +354,9 @@ textarea.text-input{resize:vertical;min-height:70px;}
 }
 .min-match-slider input[type="range"]::-moz-range-track{
   height:4px;border-radius:999px;background:var(--border);
+}
+.min-match-slider input[type="range"]::-moz-range-progress{
+  height:4px;border-radius:999px;background:var(--accent);
 }
 
 .card-grid{
