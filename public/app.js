@@ -744,6 +744,37 @@
     return nick || p.name;
   }
 
+  /* ---------------- จำเวลาที่อ่านแชทล่าสุดของแต่ละคน (client-side only, per browser) ---------------- */
+  // ใช้บอกว่าแชทไหนทางซ้ายมีข้อความใหม่ที่ยังไม่ได้เปิดอ่าน — เทียบเวลาที่เปิดแชทครั้งล่าสุด
+  // กับเวลาของข้อความล่าสุดที่เซิร์ฟเวอร์ส่งมา (lastMessageAt)
+  function lastReadKey(){ return "squadqueue_lastread_" + (state.user ? state.user.id : "anon"); }
+  function loadLastRead(){
+    try{ var raw = localStorage.getItem(lastReadKey()); return raw ? JSON.parse(raw) : {}; }
+    catch(e){ return {}; }
+  }
+  function saveLastRead(map){
+    try{ localStorage.setItem(lastReadKey(), JSON.stringify(map)); }catch(e){}
+  }
+  function markChatRead(id){
+    var map = loadLastRead();
+    map[id] = Date.now();
+    saveLastRead(map);
+    updateConversationsTabBadge();
+  }
+  function isConvUnread(conv){
+    if(!conv || conv.lastMessageFromMe || !conv.lastMessageAt) return false;
+    var lastRead = loadLastRead()[conv.id] || 0;
+    var msgTime = new Date(conv.lastMessageAt).getTime();
+    return msgTime > lastRead;
+  }
+  function hasAnyUnreadConversation(){
+    return (state.conversations || []).some(isConvUnread);
+  }
+  function updateConversationsTabBadge(){
+    var badge = document.getElementById("conversationsTabBadge");
+    if(badge) badge.hidden = !hasAnyUnreadConversation();
+  }
+
   /* ---------------- show/hide mismatch details (per-viewer preference) ---------------- */
   function showMismatchKey(){ return "squadqueue_show_mismatch_" + (state.user ? state.user.id : "anon"); }
   function isShowMismatch(){
@@ -1463,6 +1494,10 @@
     document.getElementById("scrim").hidden = false;
     document.getElementById("chatInput").focus();
 
+    // เปิดแชทแล้วถือว่าอ่านแล้ว เอาจุดแจ้งเตือนที่แท็บ "แชทล่าสุด" ออก
+    markChatRead(cand.id);
+    if(!document.getElementById("conversationsPanel").hidden) renderConversationsList();
+
     var box = document.getElementById("chatMessages");
     box.innerHTML = "";
     box.appendChild(el("div",{class:"p-card-status",style:"text-align:center;padding:14px;"},[t("loading_messages")]));
@@ -1649,6 +1684,8 @@
           if(cand) openChat(cand);
         });
       }
+      // ถ้าหน้าแชทกับคนนี้เปิดอยู่แล้วและเห็นข้อความนี้ทันที ก็ถือว่าอ่านแล้ว ไม่ต้องขึ้นจุดแจ้งเตือน
+      if(m.from === "them" && isOpenChat && !document.hidden) markChatRead(otherId);
       // ข้อความใหม่ไม่ว่าจะส่งเองหรือได้รับ ก็อัปเดตแท็บ "แชทล่าสุด" ให้ทันสมัยด้วย
       loadConversations();
     });
@@ -1677,6 +1714,7 @@
       renderConversationsList();
       var tabBtn = document.getElementById("conversationsTabBtn");
       tabBtn.hidden = state.conversations.length === 0;
+      updateConversationsTabBadge();
     }).catch(function(){});
   }
 
@@ -1689,8 +1727,12 @@
       return;
     }
     conversations.forEach(function(conv){
-      var item = el("div",{class:"conversation-item"});
-      item.appendChild(makeAvatar(conv.name, 36));
+      var unread = isConvUnread(conv);
+      var item = el("div",{class:"conversation-item" + (unread ? " unread" : "")});
+      var avatarWrap = el("div",{class:"conv-avatar-wrap"});
+      avatarWrap.appendChild(makeAvatar(conv.name, 36));
+      if(unread) avatarWrap.appendChild(el("span",{class:"unread-dot"}));
+      item.appendChild(avatarWrap);
       var textCol = el("div",{class:"conv-text"});
       textCol.appendChild(el("div",{class:"conv-name"},[displayName(conv)]));
       var preview = (conv.lastMessageFromMe ? t("you_prefix") : "") + (conv.lastMessage || "");
