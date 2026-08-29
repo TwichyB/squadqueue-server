@@ -215,6 +215,23 @@
     return muted.has(candId);
   }
 
+  /* ---------------- pin candidates to top of lobby (client-side only, per browser) ---------------- */
+  function pinnedKey(){ return "squadqueue_pinned_" + (state.user ? state.user.id : "anon"); }
+  function loadPinned(){
+    try{ var raw = localStorage.getItem(pinnedKey()); return raw ? new Set(JSON.parse(raw)) : new Set(); }
+    catch(e){ return new Set(); }
+  }
+  function savePinned(set){
+    try{ localStorage.setItem(pinnedKey(), JSON.stringify(Array.from(set))); }catch(e){}
+  }
+  function isPinned(candId){ return loadPinned().has(candId); }
+  function togglePinned(candId){
+    var pinned = loadPinned();
+    if(pinned.has(candId)) pinned.delete(candId); else pinned.add(candId);
+    savePinned(pinned);
+    return pinned.has(candId);
+  }
+
   /* ---------------- show/hide mismatch details (per-viewer preference) ---------------- */
   function showMismatchKey(){ return "squadqueue_show_mismatch_" + (state.user ? state.user.id : "anon"); }
   function isShowMismatch(){
@@ -676,6 +693,19 @@
     dial.style.setProperty("--pct", score.total);
     dial.appendChild(el("span",{},[score.total+"%"]));
     top.appendChild(dial);
+
+    var pinned = isPinned(cand.id);
+    var pinBtn = el("button",{
+      type:"button", class:"icon-btn pin-btn" + (pinned ? " active" : ""),
+      title: pinned ? "เลิกปักหมุด" : "ปักหมุดไว้บนสุด",
+      "aria-label": pinned ? "เลิกปักหมุด" : "ปักหมุดไว้บนสุด"
+    },["📌"]);
+    pinBtn.addEventListener("click", function(e){
+      e.stopPropagation();
+      togglePinned(cand.id);
+      renderGrid();
+    });
+    top.appendChild(pinBtn);
     card.appendChild(top);
 
     var gamesRow = el("div",{class:"p-card-games"});
@@ -753,13 +783,17 @@
     gameFilter.value = currentFilterVal;
 
     var minMatchFilter = document.getElementById("minMatchFilter");
-    var savedMinMatch = String(profile.minMatchPct || 0);
-    // ถ้าค่าที่ตั้งไว้ไม่ตรงกับตัวเลือกที่มีพอดี (เช่นเคยตั้งจากที่อื่นเป็น 55) ให้โชว์เป็น "ไม่กำหนด"
-    // แทนที่จะเงียบๆ เลือกอันที่ใกล้เคียงให้เอง เพื่อไม่ให้ผู้ใช้เข้าใจผิดว่ากรองไว้ที่ค่าอื่น
-    var hasOption = Array.prototype.some.call(minMatchFilter.options, function(o){ return o.value === savedMinMatch; });
-    minMatchFilter.value = hasOption ? savedMinMatch : "0";
+    // ปัดค่าที่เก็บไว้ให้เข้าขั้นที่ใกล้ที่สุด (ทีละ 10%) เผื่อเคยตั้งจากที่อื่นเป็นเลขคี่
+    var savedMinMatch = Math.min(100, Math.max(0, Math.round((profile.minMatchPct || 0) / 10) * 10));
+    minMatchFilter.value = String(savedMinMatch);
+    updateMinMatchLabel(savedMinMatch);
 
     renderGrid();
+  }
+
+  function updateMinMatchLabel(pct){
+    var label = document.getElementById("minMatchValue");
+    if(label) label.textContent = pct > 0 ? (pct + "%+") : "ไม่กำหนด";
   }
 
   function updateMinMatchPct(pct){
@@ -791,6 +825,13 @@
     });
 
     scored.sort(function(a,b){
+      // ลำดับความสำคัญ: ปักหมุดไว้บนสุดเสมอ > เคยคุยกันแล้ว > (ถ้าเลือกเรียงออนไลน์ก่อน) ออนไลน์ > % ตรงกัน
+      var aPin = isPinned(a.cand.id), bPin = isPinned(b.cand.id);
+      if(aPin !== bPin) return aPin ? -1 : 1;
+
+      var aChat = !!a.cand.hasChatted, bChat = !!b.cand.hasChatted;
+      if(aChat !== bChat) return aChat ? -1 : 1;
+
       if(sortVal==="online"){
         var aOn = state.onlineIds.has(a.cand.id), bOn = state.onlineIds.has(b.cand.id);
         if(aOn !== bOn) return aOn ? -1 : 1;
@@ -1435,7 +1476,12 @@
   document.getElementById("searchInput").addEventListener("input", renderGrid);
   document.getElementById("gameFilter").addEventListener("change", renderGrid);
   document.getElementById("sortFilter").addEventListener("change", renderGrid);
+  document.getElementById("minMatchFilter").addEventListener("input", function(e){
+    // อัปเดตตัวเลขที่โชว์ทันทีระหว่างลาก แต่ยังไม่ยิงไปเซิร์ฟเวอร์ (เหมือนปรับเสียง)
+    updateMinMatchLabel(parseInt(e.target.value, 10) || 0);
+  });
   document.getElementById("minMatchFilter").addEventListener("change", function(e){
+    // ยิงอัปเดตไปเซิร์ฟเวอร์เมื่อปล่อยมือ/เปลี่ยนค่าเสร็จแล้ว
     updateMinMatchPct(parseInt(e.target.value, 10) || 0);
   });
   document.getElementById("mismatchToggleBtn").addEventListener("click", function(){

@@ -9,7 +9,12 @@ router.get("/", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id, p.name, p.gender, p.goal, p.games, p.days, p.times, p.styles, p.genres, p.good_to_know,
-              p.reputation, rv.value AS my_vote
+              p.reputation, rv.value AS my_vote,
+              EXISTS (
+                SELECT 1 FROM messages m
+                WHERE (m.sender_id = $1 AND m.receiver_id = p.user_id)
+                   OR (m.sender_id = p.user_id AND m.receiver_id = $1)
+              ) AS has_chatted
        FROM profiles p
        JOIN users u ON u.id = p.user_id
        LEFT JOIN reputation_votes rv ON rv.target_id = p.user_id AND rv.voter_id = $1
@@ -37,6 +42,7 @@ router.get("/", requireAuth, async (req, res) => {
       goodToKnow: row.good_to_know,
       reputation: row.reputation,
       myVote: row.my_vote || 0,
+      hasChatted: row.has_chatted,
       online: onlineUserIds.has(row.id)
     }));
 
