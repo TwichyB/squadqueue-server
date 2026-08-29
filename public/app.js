@@ -922,10 +922,12 @@
   }
 
   function buildMsgEl(m){
-    var msg = el("div",{class:"msg "+(m.from==="me"?"me":"them")},[m.text]);
+    var side = m.from==="me" ? "me" : "them";
+    var row = el("div",{class:"msg-row "+side});
+    row.appendChild(el("div",{class:"msg "+side},[m.text]));
     var timeStr = formatMsgTime(m.ts);
-    if(timeStr) msg.appendChild(el("span",{class:"msg-time"},[timeStr]));
-    return msg;
+    if(timeStr) row.appendChild(el("span",{class:"msg-time"},[timeStr]));
+    return row;
   }
 
   function renderMessages(messages){
