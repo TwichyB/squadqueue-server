@@ -909,18 +909,37 @@
     state.activeChatId = null;
   }
 
+  function formatMsgTime(ts){
+    if(!ts) return "";
+    var d = new Date(ts);
+    if(isNaN(d.getTime())) return "";
+    try{
+      return d.toLocaleTimeString("th-TH", {hour:"2-digit", minute:"2-digit", hour12:false});
+    }catch(e){
+      var h = String(d.getHours()).padStart(2,"0"), mi = String(d.getMinutes()).padStart(2,"0");
+      return h+":"+mi;
+    }
+  }
+
+  function buildMsgEl(m){
+    var msg = el("div",{class:"msg "+(m.from==="me"?"me":"them")},[m.text]);
+    var timeStr = formatMsgTime(m.ts);
+    if(timeStr) msg.appendChild(el("span",{class:"msg-time"},[timeStr]));
+    return msg;
+  }
+
   function renderMessages(messages){
     var box = document.getElementById("chatMessages");
     box.innerHTML = "";
     messages.forEach(function(m){
-      box.appendChild(el("div",{class:"msg "+(m.from==="me"?"me":"them")},[m.text]));
+      box.appendChild(buildMsgEl(m));
     });
     box.scrollTop = box.scrollHeight;
   }
 
   function appendMessage(m){
     var box = document.getElementById("chatMessages");
-    box.appendChild(el("div",{class:"msg "+(m.from==="me"?"me":"them")},[m.text]));
+    box.appendChild(buildMsgEl(m));
     box.scrollTop = box.scrollHeight;
   }
 

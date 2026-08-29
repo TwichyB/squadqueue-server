@@ -489,9 +489,14 @@ textarea.text-input{resize:vertical;min-height:70px;}
 .chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
 .msg{
   max-width:78%;padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.5;
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px;
 }
 .msg.them{background:var(--surface-sunken);align-self:flex-start;border-bottom-left-radius:4px;}
 .msg.me{background:var(--accent);color:var(--accent-contrast);align-self:flex-end;border-bottom-right-radius:4px;}
+.msg-time{
+  font-size:10.5px;line-height:1;opacity:.6;white-space:nowrap;margin-left:auto;
+  font-family:var(--font-mono);
+}
 .msg.typing{background:var(--surface-sunken);align-self:flex-start;display:flex;gap:4px;padding:12px 14px;}
 .typing-dot{width:6px;height:6px;border-radius:50%;background:var(--text-faint);}
 @media (prefers-reduced-motion:no-preference){
