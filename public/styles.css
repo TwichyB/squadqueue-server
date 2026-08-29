@@ -347,6 +347,7 @@ textarea.text-input{resize:vertical;min-height:70px;}
   appearance:none;-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
   background:var(--accent);border:2px solid var(--accent-contrast);cursor:pointer;
   box-shadow:0 1px 3px rgba(0,0,0,.3);
+  margin-top:-6px; /* จุดกลม 16px vs เส้นหลอด 4px ต้องดันขึ้นให้อยู่กึ่งกลางเส้นพอดี */
 }
 .min-match-slider input[type="range"]::-moz-range-thumb{
   width:16px;height:16px;border-radius:50%;border:2px solid var(--accent-contrast);
