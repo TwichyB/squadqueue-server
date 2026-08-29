@@ -393,6 +393,7 @@ textarea.text-input{resize:vertical;min-height:70px;}
 }
 .breakdown-detail.match-full{color:var(--success);}
 .breakdown-detail b{color:var(--text-muted);font-weight:600;}
+.breakdown-detail.match-full b{color:var(--success);}
 
 .good-to-know{
   font-size:13px;color:var(--text-muted);font-style:italic;

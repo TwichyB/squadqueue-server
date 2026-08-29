@@ -341,6 +341,14 @@
         // วัน/เวลา ใช้คะแนนจาก "ความครอบคลุมความต้องการของคุณ" จึงโชว์เฉพาะสิ่งที่คุณอยากได้แต่เขาไม่มี
         days: user.days.filter(function(id){ return cand.days.indexOf(id)===-1; }).map(function(id){ return DAY_LABELS[id] || id; }),
         times: user.times.filter(function(id){ return cand.times.indexOf(id)===-1; }).map(function(id){ return TIME_FULL_LABELS[id] || id; })
+      },
+      // จุดที่ตรงกันจริง (สีเขียว) — โชว์เสมอไม่ว่าจะเปิด/ปิดปุ่มซ่อนจุดที่ไม่ตรงกัน
+      matched: {
+        games: intersect(user.games, cand.games),
+        styles: intersect(user.styles, cand.styles),
+        genres: intersect(userGenres, candGenres),
+        days: intersect(user.days, cand.days).map(function(id){ return DAY_LABELS[id] || id; }),
+        times: intersect(user.times, cand.times).map(function(id){ return TIME_FULL_LABELS[id] || id; })
       }
     };
   }
@@ -537,21 +545,9 @@
     genresField.appendChild(genresRow);
     form.appendChild(genresField);
 
-    // minimum expected match %
-    var minMatchField = el("div",{class:"field"});
-    minMatchField.appendChild(el("label",{class:"field-label"},["ระดับ % ที่อยากให้ match กันขั้นต่ำ (0 = ไม่กำหนด)"]));
-    var minMatchRow = el("div",{style:"display:flex;align-items:center;gap:12px;"});
-    var minMatchInput = el("input",{type:"range", min:"0", max:"100", step:"5", value:String(data.minMatchPct), style:"flex:1;"});
-    var minMatchValue = el("span",{style:"font-weight:600;min-width:44px;text-align:right;"},[data.minMatchPct===0 ? "ไม่กำหนด" : data.minMatchPct+"%"]);
-    minMatchInput.addEventListener("input", function(){
-      data.minMatchPct = parseInt(minMatchInput.value, 10) || 0;
-      minMatchValue.textContent = data.minMatchPct===0 ? "ไม่กำหนด" : data.minMatchPct+"%";
-    });
-    minMatchRow.appendChild(minMatchInput);
-    minMatchRow.appendChild(minMatchValue);
-    minMatchField.appendChild(minMatchRow);
-    minMatchField.appendChild(el("div",{class:"char-count"},["คนที่ % ตรงกับคุณต่ำกว่านี้ยังทักหากันได้ปกติ แค่จะมีสัญลักษณ์ ⚠️ ขึ้นเตือนข้างชื่อเขา"]));
-    form.appendChild(minMatchField);
+    // (ระดับ % match ขั้นต่ำ ย้ายไปอยู่เป็นตัวกรองด่วนที่หน้าล็อบบี้แล้ว แทนที่จะฝังในฟอร์มนี้
+    // — ดู #minMatchFilter และ updateMinMatchPct() — data.minMatchPct ยังคงถูก carry
+    // ผ่านฟอร์มนี้เฉยๆ ตอน submit เพื่อไม่ให้ค่าที่ตั้งไว้หายไปตอนแก้ไขโปรไฟล์ช่องอื่น)
 
     // good to know
     var gtkField = el("div",{class:"field"});
@@ -703,11 +699,11 @@
     var breakdown = el("div",{class:"breakdown"});
     var showMismatch = isShowMismatch();
     [
-      {label:"เกม", pct:score.breakdown.games, diff:score.mismatch.games},
-      {label:"วัน", pct:score.breakdown.day, diff:score.mismatch.days},
-      {label:"เวลา", pct:score.breakdown.time, diff:score.mismatch.times},
-      {label:"สไตล์", pct:score.breakdown.style, diff:score.mismatch.styles},
-      {label:"แนวเกม", pct:score.breakdown.genre, diff:score.mismatch.genres}
+      {label:"เกม", pct:score.breakdown.games, diff:score.mismatch.games, matched:score.matched.games},
+      {label:"วัน", pct:score.breakdown.day, diff:score.mismatch.days, matched:score.matched.days},
+      {label:"เวลา", pct:score.breakdown.time, diff:score.mismatch.times, matched:score.matched.times},
+      {label:"สไตล์", pct:score.breakdown.style, diff:score.mismatch.styles, matched:score.matched.styles},
+      {label:"แนวเกม", pct:score.breakdown.genre, diff:score.mismatch.genres, matched:score.matched.genres}
     ].forEach(function(c){
       var row = el("div",{class:"breakdown-row"});
       row.appendChild(el("span",{class:"breakdown-label"},[c.label]));
@@ -719,11 +715,15 @@
       row.appendChild(el("span",{class:"breakdown-pct"},[c.pct+"%"]));
       breakdown.appendChild(row);
 
-      if(showMismatch){
-        var detail = c.diff.length
-          ? el("div",{class:"breakdown-detail"},["ไม่ตรงกัน: ", el("b",{},[c.diff.join(", ")])])
-          : el("div",{class:"breakdown-detail match-full"},["ตรงกันหมดทุกอย่าง ✓"]);
-        breakdown.appendChild(detail);
+      // จุดที่ตรงกัน (สีเขียว) โชว์เสมอไม่ว่าปุ่มซ่อนจะเปิดหรือปิด
+      if(!c.diff.length){
+        breakdown.appendChild(el("div",{class:"breakdown-detail match-full"},["ตรงกันหมดทุกอย่าง ✓"]));
+      } else if(c.matched.length){
+        breakdown.appendChild(el("div",{class:"breakdown-detail match-full"},["ตรงกัน: ", el("b",{},[c.matched.join(", ")])]));
+      }
+      // จุดที่ไม่ตรงกัน ซ่อน/แสดงตามปุ่มที่ผู้ใช้ตั้งไว้
+      if(showMismatch && c.diff.length){
+        breakdown.appendChild(el("div",{class:"breakdown-detail"},["ไม่ตรงกัน: ", el("b",{},[c.diff.join(", ")])]));
       }
     });
     card.appendChild(breakdown);
@@ -752,7 +752,26 @@
       .forEach(function(g){ gameFilter.appendChild(el("option",{value:g},[g])); });
     gameFilter.value = currentFilterVal;
 
+    var minMatchFilter = document.getElementById("minMatchFilter");
+    var savedMinMatch = String(profile.minMatchPct || 0);
+    // ถ้าค่าที่ตั้งไว้ไม่ตรงกับตัวเลือกที่มีพอดี (เช่นเคยตั้งจากที่อื่นเป็น 55) ให้โชว์เป็น "ไม่กำหนด"
+    // แทนที่จะเงียบๆ เลือกอันที่ใกล้เคียงให้เอง เพื่อไม่ให้ผู้ใช้เข้าใจผิดว่ากรองไว้ที่ค่าอื่น
+    var hasOption = Array.prototype.some.call(minMatchFilter.options, function(o){ return o.value === savedMinMatch; });
+    minMatchFilter.value = hasOption ? savedMinMatch : "0";
+
     renderGrid();
+  }
+
+  function updateMinMatchPct(pct){
+    if(!state.profile) return;
+    var payload = Object.assign({}, state.profile, {minMatchPct: pct});
+    apiFetch("/profile", {method:"PUT", body: payload}).then(function(){
+      state.profile.minMatchPct = pct;
+      renderGrid();
+    }).catch(function(err){
+      showToast(err.message || "อัปเดตไม่สำเร็จ ลองใหม่อีกครั้ง");
+      renderLobby();
+    });
   }
 
   function renderGrid(){
@@ -1416,6 +1435,9 @@
   document.getElementById("searchInput").addEventListener("input", renderGrid);
   document.getElementById("gameFilter").addEventListener("change", renderGrid);
   document.getElementById("sortFilter").addEventListener("change", renderGrid);
+  document.getElementById("minMatchFilter").addEventListener("change", function(e){
+    updateMinMatchPct(parseInt(e.target.value, 10) || 0);
+  });
   document.getElementById("mismatchToggleBtn").addEventListener("click", function(){
     setShowMismatch(!isShowMismatch());
     updateMismatchToggleBtn();

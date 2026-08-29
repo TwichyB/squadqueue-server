@@ -102,6 +102,14 @@
             <option value="match">เรียงตาม % ตรงกัน</option>
             <option value="online">ออนไลน์ก่อน</option>
           </select>
+          <select class="filter-select" id="minMatchFilter" title="เตือนถ้า % ตรงกันต่ำกว่าที่ตั้งไว้">
+            <option value="0">% ขั้นต่ำ: ไม่กำหนด</option>
+            <option value="50">50%+</option>
+            <option value="60">60%+</option>
+            <option value="70">70%+</option>
+            <option value="80">80%+</option>
+            <option value="90">90%+</option>
+          </select>
           <button type="button" class="btn btn-ghost btn-sm mismatch-toggle" id="mismatchToggleBtn"></button>
         </div>
         <div class="card-grid" id="cardGrid"></div>
