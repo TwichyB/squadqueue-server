@@ -17,14 +17,14 @@
     {id:"evening",label:"เย็น"},{id:"night",label:"ดึก"}
   ];
 
+  // หมายเหตุ: field .label ในอาเรย์ด้านล่างนี้ (GENDERS/INTERESTED_IN_OPTIONS/GOALS/DAYS/TIMES)
+  // เก็บไว้เป็นค่าเริ่มต้น/ข้อมูลอ้างอิงเฉยๆ ตอนแสดงผลจริงใช้ genderLabel()/goalLabel()/dayLabel()/
+  // timeLabel() ที่แปลตามภาษาปัจจุบันแทนเสมอ (ดูฟังก์ชันเหล่านี้ใกล้ๆ I18N ด้านบน)
   var GENDERS = [{id:"male",label:"ชาย"},{id:"female",label:"หญิง"},{id:"non_binary",label:"Non-binary"},{id:"unspecified",label:"ขอไม่เปิดเผย"}];
-  var GENDER_LABELS = {male:"ชาย", female:"หญิง", non_binary:"Non-binary", unspecified:"ขอไม่เปิดเผย"};
   // ตัวเลือก "สนใจเพศไหน" — โชว์เฉพาะตอนเลือกเป้าหมาย "เป็นมากกว่าเพื่อนก็ได้ถ้าถูกใจ"
   var INTERESTED_IN_OPTIONS = [{id:"male",label:"ชาย"},{id:"female",label:"หญิง"}];
-  var INTERESTED_IN_LABELS = {male:"ชาย", female:"หญิง"};
 
   var GOALS = [{id:"friends",label:"หาเพื่อนเล่นเกมอย่างเดียว"},{id:"open",label:"เป็นมากกว่าเพื่อนก็ได้ถ้าถูกใจ"}];
-  var GOAL_LABELS = {friends:"หาเพื่อนเล่นเกมอย่างเดียว", open:"เป็นมากกว่าเพื่อนก็ได้ถ้าถูกใจ"};
 
   var STYLES = ["สายชิล ไม่ซีเรียส","จริงจัง/ตั้งใจแข่ง","ชอบคุยระหว่างเกม","โฟกัสเงียบ ๆ",
     "มือใหม่โอเค ใจดี","สายฝึกหนัก อยากพัฒนา","ชอบวางแผน","สายฮา มีมทุกเกม",
@@ -66,6 +66,469 @@
     }catch(e){}
   }
   restoreTheme();
+
+  /* ---------------- language toggle (per-device UI preference only) ---------------- */
+  var LANG_KEY = "squadqueue_lang_v1";
+  var I18N = {
+    th: {
+      theme_toggle_title: "สลับโหมดสว่าง/มืด",
+      lang_toggle_title: "สลับภาษาไทย/อังกฤษ",
+      notif_toggle_default_title: "เปิดการแจ้งเตือน",
+      edit_profile: "แก้ไขโปรไฟล์",
+      blocked_users_btn: "ผู้ใช้ที่บล็อก",
+      logout: "ออกจากระบบ",
+      app_tagline: "เข้าคิวหาปาร์ตี้",
+      auth_title: "เข้าสู่ระบบ MosUP",
+      auth_subtitle: "เข้าสู่ระบบหรือสมัครสมาชิกเพื่อเริ่มหาเพื่อนเล่นเกม",
+      tab_login: "เข้าสู่ระบบ",
+      tab_signup: "สมัครสมาชิก",
+      or_divider: "หรือ",
+      login_discord: "เข้าสู่ระบบด้วย Discord",
+      auth_note: "บัญชีของคุณถูกเก็บไว้บนเซิร์ฟเวอร์จริง เข้าใช้งานได้จากทุกอุปกรณ์ รหัสผ่านถูกเข้ารหัสก่อนบันทึกเสมอ ปุ่ม Discord จะใช้งานได้เมื่อผู้ดูแลระบบตั้งค่า OAuth ไว้แล้วเท่านั้น การสมัครด้วยอีเมล/รหัสผ่านต้องกดยืนยันลิงก์ที่ส่งไปในอีเมลก่อนจึงจะเข้าสู่ระบบได้",
+      onboard_title: "ตั้งโปรไฟล์นักเลนของคุณ",
+      onboard_subtitle: "บอกเกมที่เล่น เวลาที่ว่าง สไตล์การเล่น แล้วเราจะจับคู่คนที่เข้ากับคุณจริง ๆ",
+      lobby_title: "ล็อบบี้จับคู่",
+      search_placeholder: "ค้นหาชื่อหรือเกม...",
+      sort_match: "เรียงตาม % ตรงกัน",
+      sort_online: "ออนไลน์ก่อน",
+      minmatch_title: "เตือนถ้า % ตรงกันต่ำกว่าที่ตั้งไว้",
+      minmatch_label: "% ขั้นต่ำ: ",
+      minmatch_unset: "ไม่กำหนด",
+      close: "ปิด",
+      update_profile_title: "อัปเดตข้อมูลนักเลน",
+      manage_blocks: "จัดการการบล็อก",
+      blocked_users_title: "ผู้ใช้ที่คุณบล็อกไว้",
+      recent_chats_tab: "💬 แชท",
+      recent_chats_header: "แชทล่าสุด",
+      nickname_edit_title: "ตั้งชื่อเล่น (เห็นเฉพาะคุณ)",
+      mute_this_person: "ปิดแจ้งเตือนคนนี้",
+      block_this_user: "บล็อกผู้ใช้นี้",
+      close_chat: "ปิดแชท",
+      pick_emoji: "เลือกอิโมจิ",
+      type_message_placeholder: "พิมพ์ข้อความ...",
+      send: "ส่ง",
+
+      day_mon: "จ", day_tue: "อ", day_wed: "พ", day_thu: "พฤ", day_fri: "ศ", day_sat: "ส", day_sun: "อา",
+      time_morning: "เช้า", time_afternoon: "บ่าย", time_evening: "เย็น", time_night: "ดึก",
+      gender_male: "ชาย", gender_female: "หญิง", gender_non_binary: "Non-binary", gender_unspecified: "ขอไม่เปิดเผย",
+      goal_friends: "หาเพื่อนเล่นเกมอย่างเดียว", goal_open: "เป็นมากกว่าเพื่อนก็ได้ถ้าถูกใจ",
+
+      notif_on_title: "แจ้งเตือนเปิดอยู่ (กดเพื่อปิด)",
+      notif_off_title: "แจ้งเตือนปิดอยู่ (กดเพื่อเปิด)",
+      toast_notif_off: "ปิดการแจ้งเตือนแล้ว",
+      toast_notif_on: "เปิดการแจ้งเตือนแล้ว!",
+      toast_notif_on_inapp_only: "เปิดการแจ้งเตือนในแอปแล้ว (แจ้งเตือนเดสก์ท็อปถูกบล็อกไว้ที่เบราว์เซอร์)",
+      toast_notif_on_inapp: "เปิดการแจ้งเตือนในแอปแล้ว",
+
+      match_new_title_single: "เจอคู่ใหม่ที่เข้ากับคุณ! 🎮",
+      match_new_single: "{{name}} ตรงกับคุณ {{pct}}%",
+      match_new_title_multi: "เจอคู่ใหม่ {{count}} คน! 🎮",
+      match_new_top: "คะแนนสูงสุด: {{name}} ({{pct}}%)",
+
+      name_field_label: "ชื่อ / แท็กที่อยากให้คนอื่นเห็น",
+      name_placeholder: "เช่น ริว_ninja",
+      gender_field_label: "เพศ",
+      goal_field_label: "มาหาเพื่อนเล่นเกมแบบไหน (เลือกได้มากกว่า 1)",
+      interested_field_label: "สนใจเพศไหน (เลือกได้มากกว่า 1)",
+      games_field_label: "เกมที่เล่นประจำ (เลือกได้หลายเกม)",
+      add_game_placeholder: "เพิ่มเกมอื่น...",
+      days_field_label: "วันที่มักจะว่างเล่นเกม",
+      times_field_label: "ช่วงเวลาที่ว่างเล่น",
+      styles_field_label: "สไตล์การเล่น / บุคลิก (เลือกได้สูงสุด 4)",
+      styles_max_toast: "เลือกได้สูงสุด 4 สไตล์",
+      genres_field_label: "แนวเกมที่ชอบ (เลือกได้สูงสุด 8)",
+      genres_max_toast: "เลือกได้สูงสุด 8 แนว",
+      gtk_field_label: "อยากให้คนที่มาเล่นด้วยรู้ไว้ก่อน (Good to know)",
+      gtk_placeholder: "เช่น ชอบพากย์เสียงตลก ๆ ระหว่างเล่น, ต้องออกไอดึกสุดเที่ยงคืน...",
+      form_error_required: "กรอกชื่อ และเลือกอย่างน้อย 1 เกม, 1 วัน, 1 ช่วงเวลา ก่อนนะ",
+      save_changes_btn: "บันทึกการเปลี่ยนแปลง",
+      start_matching_btn: "เริ่มหาเพื่อนเล่น",
+
+      vote_up_title: "เพิ่มคะแนนให้",
+      vote_down_title: "ลดคะแนน",
+      toast_vote_failed: "โหวตไม่สำเร็จ ลองใหม่อีกครั้ง",
+
+      online_now: "ออนไลน์ตอนนี้",
+      offline: "ออฟไลน์",
+      match_warn_title: "% ตรงกัน ({{pct}}%) ต่ำกว่าระดับขั้นต่ำที่คุณตั้งไว้ ({{min}}%) — ยังทักไปคุยได้ปกติ",
+      unpin: "เลิกปักหมุด",
+      pin_top: "ปักหมุดไว้บนสุด",
+      interested_prefix: "สนใจ: {{label}}",
+      label_games: "เกม",
+      label_days: "วัน",
+      label_times: "เวลา",
+      label_styles: "สไตล์",
+      label_genres: "แนวเกม",
+      match_all: "ตรงกันหมดทุกอย่าง ✓",
+      match_prefix: "ตรงกัน: ",
+      mismatch_prefix: "ไม่ตรงกัน: ",
+      cta_message: "ทักไปคุย",
+
+      hello_lobby_sub: "สวัสดี {{name}} กำลังจับคู่จากเกม เวลา และสไตล์ของคุณ",
+      all_games_option: "ทุกเกม",
+      toast_update_failed: "อัปเดตไม่สำเร็จ ลองใหม่อีกครั้ง",
+      queue_count: "{{count}} คนในคิว",
+      empty_state: "ไม่พบคนที่ตรงกับตัวกรองนี้ ลองเปลี่ยนคำค้นหรือเกมดูนะ",
+      rep_title: "คะแนน reputation ของคุณ",
+
+      toggle_hide_mismatch: "🙈 ซ่อนจุดที่ไม่ตรงกัน",
+      toggle_show_mismatch: "👁 แสดงจุดที่ไม่ตรงกัน",
+
+      loading_messages: "กำลังโหลดข้อความ...",
+      loading: "กำลังโหลด...",
+      toast_load_messages_failed: "โหลดข้อความไม่สำเร็จ",
+      toast_send_failed: "ส่งข้อความไม่สำเร็จ",
+
+      toast_block_success: "{{name}} ถูกบล็อกแล้ว",
+      fallback_this_user: "ผู้ใช้นี้",
+      toast_block_failed: "บล็อกไม่สำเร็จ ลองใหม่อีกครั้ง",
+      no_blocked_users: "คุณยังไม่ได้บล็อกใครไว้",
+      unblock_btn: "เลิกบล็อก",
+      toast_unblock_success: "{{name}} ถูกเลิกบล็อกแล้ว",
+      toast_unblock_failed: "เลิกบล็อกไม่สำเร็จ ลองใหม่อีกครั้ง",
+      toast_load_list_failed: "โหลดรายชื่อไม่สำเร็จ",
+
+      new_message_from: "ข้อความใหม่จาก {{name}}",
+      fallback_new_friend: "เพื่อนใหม่",
+      no_conversations: "ยังไม่มีแชทกับใครเลย",
+      you_prefix: "คุณ: ",
+      fallback_user: "ผู้ใช้",
+
+      email_label: "อีเมล",
+      password_label: "รหัสผ่าน",
+      password_placeholder: "อย่างน้อย 6 ตัวอักษร",
+      confirm_password_label: "ยืนยันรหัสผ่าน",
+      confirm_password_placeholder: "พิมพ์รหัสผ่านอีกครั้ง",
+      forgot_password_link: "ลืมรหัสผ่าน?",
+      err_invalid_email: "กรอกอีเมลให้ถูกต้อง",
+      err_password_length: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
+      err_password_mismatch: "รหัสผ่านยืนยันไม่ตรงกัน",
+      err_generic_retry: "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง",
+      toast_login_success: "เข้าสู่ระบบสำเร็จ!",
+
+      verification_sent_prefix: "ส่งอีเมลยืนยันไปที่ ",
+      verification_sent_suffix: " แล้ว กรุณาเปิดกล่องจดหมายแล้วกดลิงก์ยืนยันก่อนเข้าสู่ระบบ (เช็คโฟลเดอร์สแปมด้วยถ้าไม่เจอ)",
+      resend_verification_btn: "ส่งอีเมลยืนยันอีกครั้ง",
+      toast_resend_success: "ส่งอีเมลยืนยันใหม่แล้ว",
+      toast_resend_failed: "ส่งอีเมลไม่สำเร็จ",
+      back_to_login_btn: "กลับไปหน้าเข้าสู่ระบบ",
+
+      forgot_password_desc: "กรอกอีเมลที่ใช้สมัคร แล้วเราจะส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้",
+      send_reset_link_btn: "ส่งลิงก์ตั้งรหัสผ่านใหม่",
+      forgot_password_sent_fallback: "ถ้าอีเมลนี้อยู่ในระบบ จะส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้แล้ว",
+
+      reset_password_desc: "ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ",
+      new_password_label: "รหัสผ่านใหม่",
+      confirm_new_password_label: "ยืนยันรหัสผ่านใหม่",
+      set_new_password_btn: "ตั้งรหัสผ่านใหม่",
+      toast_reset_success: "ตั้งรหัสผ่านใหม่สำเร็จ! เข้าสู่ระบบให้อัตโนมัติแล้ว",
+      err_reset_failed: "ตั้งรหัสผ่านใหม่ไม่สำเร็จ ลองขอลิงก์ใหม่อีกครั้ง",
+
+      toast_save_profile_success: "บันทึกโปรไฟล์แล้ว! กำลังหาคู่ให้...",
+      toast_save_profile_failed: "บันทึกโปรไฟล์ไม่สำเร็จ",
+      toast_discord_login_success: "เข้าสู่ระบบด้วย Discord สำเร็จ!",
+      toast_email_verified: "ยืนยันอีเมลสำเร็จ! เข้าสู่ระบบให้อัตโนมัติแล้ว",
+      toast_update_profile_success: "อัปเดตโปรไฟล์แล้ว",
+      toast_update_profile_failed: "อัปเดตโปรไฟล์ไม่สำเร็จ",
+
+      mute_toast_on: "ปิดแจ้งเตือนจากคนนี้แล้ว",
+      mute_toast_off: "เปิดแจ้งเตือนจากคนนี้แล้ว",
+      unmute_title: "เปิดแจ้งเตือนคนนี้อีกครั้ง"
+    },
+    en: {
+      theme_toggle_title: "Toggle light/dark mode",
+      lang_toggle_title: "Switch Thai/English",
+      notif_toggle_default_title: "Turn on notifications",
+      edit_profile: "Edit profile",
+      blocked_users_btn: "Blocked users",
+      logout: "Log out",
+      app_tagline: "Queue up with your squad",
+      auth_title: "Log in to MosUP",
+      auth_subtitle: "Log in or sign up to start finding gaming buddies",
+      tab_login: "Log in",
+      tab_signup: "Sign up",
+      or_divider: "or",
+      login_discord: "Log in with Discord",
+      auth_note: "Your account is stored on a real server, so you can log in from any device. Your password is always encrypted before it's saved. The Discord button only works once an admin has set up OAuth. Signing up with email/password requires clicking a verification link sent to your email before you can log in.",
+      onboard_title: "Set up your gamer profile",
+      onboard_subtitle: "Tell us the games you play, your free time, and your play style, and we'll match you with people who really fit",
+      lobby_title: "Matching Lobby",
+      search_placeholder: "Search by name or game...",
+      sort_match: "Sort by match %",
+      sort_online: "Online first",
+      minmatch_title: "Warn if match % is below this",
+      minmatch_label: "Min %: ",
+      minmatch_unset: "No minimum",
+      close: "Close",
+      update_profile_title: "Update your gamer info",
+      manage_blocks: "Manage blocks",
+      blocked_users_title: "Users you've blocked",
+      recent_chats_tab: "💬 Chats",
+      recent_chats_header: "Recent chats",
+      nickname_edit_title: "Set a nickname (only you see it)",
+      mute_this_person: "Mute this person",
+      block_this_user: "Block this user",
+      close_chat: "Close chat",
+      pick_emoji: "Pick an emoji",
+      type_message_placeholder: "Type a message...",
+      send: "Send",
+
+      day_mon: "Mon", day_tue: "Tue", day_wed: "Wed", day_thu: "Thu", day_fri: "Fri", day_sat: "Sat", day_sun: "Sun",
+      time_morning: "Morning", time_afternoon: "Afternoon", time_evening: "Evening", time_night: "Night",
+      gender_male: "Male", gender_female: "Female", gender_non_binary: "Non-binary", gender_unspecified: "Prefer not to say",
+      goal_friends: "Just looking for gaming buddies", goal_open: "Open to more than friends if it clicks",
+
+      notif_on_title: "Notifications on (click to turn off)",
+      notif_off_title: "Notifications off (click to turn on)",
+      toast_notif_off: "Notifications turned off",
+      toast_notif_on: "Notifications turned on!",
+      toast_notif_on_inapp_only: "In-app notifications turned on (desktop notifications are blocked by your browser)",
+      toast_notif_on_inapp: "In-app notifications turned on",
+
+      match_new_title_single: "Found a new match for you! 🎮",
+      match_new_single: "{{name}} matches you {{pct}}%",
+      match_new_title_multi: "Found {{count}} new matches! 🎮",
+      match_new_top: "Top score: {{name}} ({{pct}}%)",
+
+      name_field_label: "Name / tag you want others to see",
+      name_placeholder: "e.g. Ryu_ninja",
+      gender_field_label: "Gender",
+      goal_field_label: "What kind of gaming buddy are you looking for? (choose 1 or more)",
+      interested_field_label: "Interested in which gender(s)? (choose 1 or more)",
+      games_field_label: "Games you regularly play (choose multiple)",
+      add_game_placeholder: "Add another game...",
+      days_field_label: "Days you're usually free to play",
+      times_field_label: "Time of day you're free",
+      styles_field_label: "Play style / personality (choose up to 4)",
+      styles_max_toast: "You can choose up to 4 styles",
+      genres_field_label: "Favorite genres (choose up to 8)",
+      genres_max_toast: "You can choose up to 8 genres",
+      gtk_field_label: "Something players should know before matching (Good to know)",
+      gtk_placeholder: "e.g. I do funny voices while playing, have to log off by midnight...",
+      form_error_required: "Please enter a name and choose at least 1 game, 1 day, and 1 time slot",
+      save_changes_btn: "Save changes",
+      start_matching_btn: "Start matching",
+
+      vote_up_title: "Upvote",
+      vote_down_title: "Downvote",
+      toast_vote_failed: "Vote failed, please try again",
+
+      online_now: "Online now",
+      offline: "Offline",
+      match_warn_title: "Match % ({{pct}}%) is below your set minimum ({{min}}%) — you can still message them as usual",
+      unpin: "Unpin",
+      pin_top: "Pin to top",
+      interested_prefix: "Interested in: {{label}}",
+      label_games: "Games",
+      label_days: "Days",
+      label_times: "Time",
+      label_styles: "Style",
+      label_genres: "Genres",
+      match_all: "Everything matches ✓",
+      match_prefix: "Match: ",
+      mismatch_prefix: "Different: ",
+      cta_message: "Say hi",
+
+      hello_lobby_sub: "Hi {{name}}, matching you up based on your games, time, and style",
+      all_games_option: "All games",
+      toast_update_failed: "Update failed, please try again",
+      queue_count: "{{count}} people in the queue",
+      empty_state: "No one matches this filter. Try changing your search or game.",
+      rep_title: "Your reputation score",
+
+      toggle_hide_mismatch: "🙈 Hide mismatches",
+      toggle_show_mismatch: "👁 Show mismatches",
+
+      loading_messages: "Loading messages...",
+      loading: "Loading...",
+      toast_load_messages_failed: "Failed to load messages",
+      toast_send_failed: "Failed to send message",
+
+      toast_block_success: "{{name}} has been blocked",
+      fallback_this_user: "this user",
+      toast_block_failed: "Block failed, please try again",
+      no_blocked_users: "You haven't blocked anyone yet",
+      unblock_btn: "Unblock",
+      toast_unblock_success: "{{name}} has been unblocked",
+      toast_unblock_failed: "Unblock failed, please try again",
+      toast_load_list_failed: "Failed to load list",
+
+      new_message_from: "New message from {{name}}",
+      fallback_new_friend: "new friend",
+      no_conversations: "No conversations yet",
+      you_prefix: "You: ",
+      fallback_user: "User",
+
+      email_label: "Email",
+      password_label: "Password",
+      password_placeholder: "At least 6 characters",
+      confirm_password_label: "Confirm password",
+      confirm_password_placeholder: "Type your password again",
+      forgot_password_link: "Forgot password?",
+      err_invalid_email: "Enter a valid email",
+      err_password_length: "Password must be at least 6 characters",
+      err_password_mismatch: "Passwords don't match",
+      err_generic_retry: "Something went wrong, please try again",
+      toast_login_success: "Logged in successfully!",
+
+      verification_sent_prefix: "We sent a verification email to ",
+      verification_sent_suffix: ". Please check your inbox and click the verification link before logging in (check your spam folder if you don't see it).",
+      resend_verification_btn: "Resend verification email",
+      toast_resend_success: "Verification email resent",
+      toast_resend_failed: "Failed to send email",
+      back_to_login_btn: "Back to login",
+
+      forgot_password_desc: "Enter the email you signed up with, and we'll send you a link to reset your password",
+      send_reset_link_btn: "Send reset link",
+      forgot_password_sent_fallback: "If this email is registered, we've sent a password reset link",
+
+      reset_password_desc: "Set a new password for your account",
+      new_password_label: "New password",
+      confirm_new_password_label: "Confirm new password",
+      set_new_password_btn: "Set new password",
+      toast_reset_success: "Password reset successful! You've been logged in automatically.",
+      err_reset_failed: "Password reset failed, please request a new link",
+
+      toast_save_profile_success: "Profile saved! Finding matches for you...",
+      toast_save_profile_failed: "Failed to save profile",
+      toast_discord_login_success: "Logged in with Discord successfully!",
+      toast_email_verified: "Email verified! You've been logged in automatically.",
+      toast_update_profile_success: "Profile updated",
+      toast_update_profile_failed: "Failed to update profile",
+
+      mute_toast_on: "Notifications from this person are now off",
+      mute_toast_off: "Notifications from this person are now on",
+      unmute_title: "Turn notifications back on for this person"
+    }
+  };
+  function getCurrentLang(){
+    try{
+      var saved = localStorage.getItem(LANG_KEY);
+      if(saved === "en" || saved === "th") return saved;
+    }catch(e){}
+    return "th";
+  }
+  function t(key, vars){
+    var dict = I18N[getCurrentLang()] || I18N.th;
+    var str = (dict && dict[key] != null) ? dict[key] : (I18N.th[key] != null ? I18N.th[key] : key);
+    if(vars){
+      for(var k in vars){ str = str.split("{{"+k+"}}").join(String(vars[k])); }
+    }
+    return str;
+  }
+  // สไตล์การเล่น/แนวเกม ถูกเก็บและเทียบตรงกันด้วยข้อความภาษาไทยเป๊ะๆ (ไม่มี id แยกจาก label
+  // เหมือนฟิลด์อื่น) เพราะฉะนั้นห้ามเปลี่ยนค่าที่เก็บ/เทียบเป็นภาษาอังกฤษเด็ดขาด ไม่งั้นโปรไฟล์เก่า
+  // จะจับคู่กันไม่ได้อีกต่อไป — สองฟังก์ชันนี้แค่แปลตอน "แสดงผล" เฉยๆ ค่าจริงยังเป็นไทยเหมือนเดิม
+  var STYLE_DISPLAY_EN = {
+    "สายชิล ไม่ซีเรียส": "Chill, not serious",
+    "จริงจัง/ตั้งใจแข่ง": "Serious/competitive",
+    "ชอบคุยระหว่างเกม": "Likes chatting while playing",
+    "โฟกัสเงียบ ๆ": "Quiet focus",
+    "มือใหม่โอเค ใจดี": "Beginner-friendly, kind",
+    "สายฝึกหนัก อยากพัฒนา": "Grinds hard, wants to improve",
+    "ชอบวางแผน": "Likes strategizing",
+    "สายฮา มีมทุกเกม": "Meme lord, jokes every game",
+    "ใช้วอยซ์แชทได้": "Okay with voice chat",
+    "พิมพ์แชทอย่างเดียว": "Text chat only"
+  };
+  var GENRE_DISPLAY_EN = {
+    "Gacha/สะสม": "Gacha/Collecting"
+  };
+  function styleDisplay(s){ return getCurrentLang()==="en" ? (STYLE_DISPLAY_EN[s]||s) : s; }
+  function genreDisplay(g){ return getCurrentLang()==="en" ? (GENRE_DISPLAY_EN[g]||g) : g; }
+  function dayLabel(id){ return t("day_"+id); }
+  function timeLabel(id){ return t("time_"+id); }
+  function genderLabel(id){ return t("gender_"+id); }
+  function goalLabel(id){ return t("goal_"+id); }
+
+  // เติมข้อความ/placeholder/title/aria-label ให้ตรงกับภาษาปัจจุบัน สำหรับ markup ที่เขียนไว้ตรงๆ
+  // ใน index.html (ผ่าน attribute data-i18n / data-i18n-placeholder / data-i18n-title / data-i18n-aria)
+  function applyI18nStatic(){
+    document.querySelectorAll("[data-i18n]").forEach(function(node){
+      node.textContent = t(node.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(function(node){
+      node.setAttribute("placeholder", t(node.getAttribute("data-i18n-placeholder")));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach(function(node){
+      node.setAttribute("title", t(node.getAttribute("data-i18n-title")));
+    });
+    document.querySelectorAll("[data-i18n-aria]").forEach(function(node){
+      node.setAttribute("aria-label", t(node.getAttribute("data-i18n-aria")));
+    });
+    var langBtn = document.getElementById("langToggleBtn");
+    if(langBtn) langBtn.textContent = getCurrentLang() === "en" ? "TH" : "EN";
+  }
+
+  // เมื่อสลับภาษา ต้องรีเฟรชทุกส่วนที่กำลังโชว์อยู่จริงในตอนนั้น ไม่ใช่แค่ markup ที่ตายตัว
+  // เพราะการ์ด/ฟอร์ม/แชท ฯลฯ ส่วนใหญ่ถูกสร้างด้วย JS (ไม่ใช่ HTML ตรงๆ) ต้อง re-render ใหม่เพื่อให้ข้อความเปลี่ยน
+  function refreshUIForLanguageChange(){
+    applyI18nStatic();
+    updateNotifToggleBtn();
+    updateMismatchToggleBtn();
+    if(!document.getElementById("viewAuth").hidden){
+      // จะรู้ mode (login/signup) ปัจจุบันจาก class active ของแท็บ
+      var signupActive = document.getElementById("tabSignup").classList.contains("active");
+      var mount = document.getElementById("authFormMount");
+      // ไม่รีเฟรชถ้ากำลังอยู่หน้ารอยืนยันอีเมล/ลืมรหัสผ่าน/ตั้งรหัสใหม่ (ไม่มีแท็บ active เลย) เพื่อไม่ให้ข้อมูลที่กรอกไว้หาย
+      if(document.getElementById("tabLogin").classList.contains("active") || signupActive){
+        renderAuthForm(signupActive ? "signup" : "login");
+      }
+    }
+    if(!document.getElementById("viewOnboarding").hidden){
+      // ส่ง lastFormData (ค่าที่ผู้ใช้เลือกไว้แล้วก่อนสลับภาษา) กลับเข้าไปเป็น "existing" แทนที่จะส่ง null
+      // ไม่งั้นสลับภาษาระหว่างกรอกฟอร์มจะทำให้เกม/วัน/เวลา ฯลฯ ที่เลือกไว้หายหมด
+      buildForm(document.getElementById("onboardFormMount"), lastFormData, function(data){
+        return apiFetch("/profile", {method:"PUT", body:data}).then(function(){
+          state.profile = data;
+          showToast(t("toast_save_profile_success"));
+          goToLobby();
+        }).catch(function(err){
+          showToast(err.message || t("toast_save_profile_failed"));
+        });
+      });
+    }
+    if(!document.getElementById("viewLobby").hidden && state.profile){
+      renderMeChip();
+      renderLobby();
+    }
+    if(!document.getElementById("profileModal").hidden && state.profile){
+      // เช่นเดียวกับฟอร์ม onboarding — ใช้ lastFormData แทน state.profile เพื่อไม่ให้การแก้ไขที่ยังไม่ได้บันทึกหายไป
+      buildForm(document.getElementById("modalFormMount"), lastFormData || state.profile, function(data){
+        return apiFetch("/profile", {method:"PUT", body:data}).then(function(){
+          state.profile = data;
+          document.getElementById("profileModal").hidden = true;
+          document.getElementById("scrim").hidden = true;
+          showToast(t("toast_update_profile_success"));
+          renderMeChip();
+          renderLobby();
+          checkNewMatches();
+        }).catch(function(err){
+          showToast(err.message || t("toast_update_profile_failed"));
+        });
+      });
+    }
+    if(!document.getElementById("blockedModal").hidden){
+      renderBlockedList();
+    }
+    if(!document.getElementById("conversationsPanel").hidden){
+      renderConversationsList();
+    }
+    if(state.activeChatCand){
+      var cand = state.activeChatCand;
+      document.getElementById("chatStatus").textContent = (state.onlineIds.has(cand.id) ? t("online_now") : t("offline")) + " · " + genderLabel(cand.gender);
+      var muteBtn = document.getElementById("muteChatBtn");
+      muteBtn.title = isMuted(cand.id) ? t("unmute_title") : t("mute_this_person");
+    }
+  }
+  function applyLanguage(lang){
+    try{ localStorage.setItem(LANG_KEY, lang); }catch(e){}
+    refreshUIForLanguageChange();
+  }
+  function restoreLanguage(){
+    applyI18nStatic();
+  }
+  restoreLanguage();
 
   /* ---------------- utils ---------------- */
   function el(tag, attrs, children){
@@ -117,8 +580,6 @@
     if(a.length===0 && b.length===0) return 0;
     return (2*intersectGames(a,b).length)/(a.length+b.length);
   }
-  var DAY_LABELS = DAYS.reduce(function(m,d){ m[d.id]=d.label; return m; }, {});
-  var TIME_FULL_LABELS = TIMES.reduce(function(m,t){ m[t.id]=t.label; return m; }, {});
   function showToast(msg){
     var t = document.getElementById("toast");
     t.textContent = msg;
@@ -156,7 +617,7 @@
     body.appendChild(el("div",{class:"notif-title"},[title]));
     body.appendChild(el("div",{class:"notif-text"},[text]));
     card.appendChild(body);
-    var closeBtn = el("button",{class:"notif-close", type:"button", "aria-label":"ปิด"},["✕"]);
+    var closeBtn = el("button",{class:"notif-close", type:"button", "aria-label":t("close")},["✕"]);
     card.appendChild(closeBtn);
 
     function remove(){ if(card.parentNode) card.parentNode.removeChild(card); }
@@ -183,7 +644,7 @@
     if(!btn) return;
     var on = isNotifEnabled();
     btn.classList.toggle("enabled", on);
-    btn.title = on ? "แจ้งเตือนเปิดอยู่ (กดเพื่อปิด)" : "แจ้งเตือนปิดอยู่ (กดเพื่อเปิด)";
+    btn.title = on ? t("notif_on_title") : t("notif_off_title");
   }
 
   function toggleNotifPermission(){
@@ -192,7 +653,7 @@
       // (it can't be revoked from JS anyway) — we just stop using it.
       setNotifEnabled(false);
       updateNotifToggleBtn();
-      showToast("ปิดการแจ้งเตือนแล้ว");
+      showToast(t("toast_notif_off"));
       return;
     }
 
@@ -201,7 +662,7 @@
       // still work fine, so just flip the preference on.
       setNotifEnabled(true);
       updateNotifToggleBtn();
-      showToast("เปิดการแจ้งเตือนแล้ว!");
+      showToast(t("toast_notif_on"));
       return;
     }
     if(Notification.permission === "denied"){
@@ -209,19 +670,19 @@
       // blocked at the browser level.
       setNotifEnabled(true);
       updateNotifToggleBtn();
-      showToast("เปิดการแจ้งเตือนในแอปแล้ว (แจ้งเตือนเดสก์ท็อปถูกบล็อกไว้ที่เบราว์เซอร์)");
+      showToast(t("toast_notif_on_inapp_only"));
       return;
     }
     if(Notification.permission === "granted"){
       setNotifEnabled(true);
       updateNotifToggleBtn();
-      showToast("เปิดการแจ้งเตือนแล้ว!");
+      showToast(t("toast_notif_on"));
       return;
     }
     Notification.requestPermission().then(function(perm){
       setNotifEnabled(true);
       updateNotifToggleBtn();
-      showToast(perm === "granted" ? "เปิดการแจ้งเตือนแล้ว!" : "เปิดการแจ้งเตือนในแอปแล้ว");
+      showToast(perm === "granted" ? t("toast_notif_on") : t("toast_notif_on_inapp"));
     });
   }
 
@@ -300,7 +761,7 @@
     if(!btn) return;
     var on = isShowMismatch();
     btn.classList.toggle("active", on);
-    btn.textContent = on ? "🙈 ซ่อนจุดที่ไม่ตรงกัน" : "👁 แสดงจุดที่ไม่ตรงกัน";
+    btn.textContent = on ? t("toggle_hide_mismatch") : t("toggle_show_mismatch");
   }
 
   function seenMatchesKey(){ return "squadqueue_seen_matches_" + (state.user ? state.user.id : "anon"); }
@@ -332,10 +793,10 @@
     fresh.sort(function(a,b){ return b.score.total - a.score.total; });
     if(fresh.length === 1){
       var f = fresh[0];
-      showNotification("เจอคู่ใหม่ที่เข้ากับคุณ! 🎮", displayName(f.cand) + " ตรงกับคุณ " + f.score.total + "%", function(){ openChat(f.cand); });
+      showNotification(t("match_new_title_single"), t("match_new_single", {name: displayName(f.cand), pct: f.score.total}), function(){ openChat(f.cand); });
     } else {
       var top = fresh[0];
-      showNotification("เจอคู่ใหม่ " + fresh.length + " คน! 🎮", "คะแนนสูงสุด: " + displayName(top.cand) + " (" + top.score.total + "%)", function(){
+      showNotification(t("match_new_title_multi", {count: fresh.length}), t("match_new_top", {name: displayName(top.cand), pct: top.score.total}), function(){
         var lobby = document.getElementById("viewLobby");
         if(!lobby.hidden) lobby.scrollIntoView({behavior:"smooth"});
       });
@@ -372,7 +833,7 @@
     return fetch("/api" + path, opts).then(function(res){
       return res.json().catch(function(){ return {}; }).then(function(data){
         if(!res.ok){
-          var err = new Error(data.error || "เกิดข้อผิดพลาด");
+          var err = new Error(data.error || t("err_generic_retry"));
           err.status = res.status;
           err.needsVerification = data.needsVerification;
           err.email = data.email;
@@ -405,19 +866,19 @@
       mismatch: {
         // เกม/สไตล์/แนวเกม ใช้คะแนนแบบ dice (สนใจทั้ง 2 ฝั่ง) จึงโชว์ส่วนต่างแบบสมมาตร
         games: symDiffGames(user.games, cand.games),
-        styles: symDiff(user.styles, cand.styles),
-        genres: symDiff(userGenres, candGenres),
+        styles: symDiff(user.styles, cand.styles).map(styleDisplay),
+        genres: symDiff(userGenres, candGenres).map(genreDisplay),
         // วัน/เวลา ใช้คะแนนจาก "ความครอบคลุมความต้องการของคุณ" จึงโชว์เฉพาะสิ่งที่คุณอยากได้แต่เขาไม่มี
-        days: user.days.filter(function(id){ return cand.days.indexOf(id)===-1; }).map(function(id){ return DAY_LABELS[id] || id; }),
-        times: user.times.filter(function(id){ return cand.times.indexOf(id)===-1; }).map(function(id){ return TIME_FULL_LABELS[id] || id; })
+        days: user.days.filter(function(id){ return cand.days.indexOf(id)===-1; }).map(function(id){ return dayLabel(id) || id; }),
+        times: user.times.filter(function(id){ return cand.times.indexOf(id)===-1; }).map(function(id){ return timeLabel(id) || id; })
       },
       // จุดที่ตรงกันจริง (สีเขียว) — โชว์เสมอไม่ว่าจะเปิด/ปิดปุ่มซ่อนจุดที่ไม่ตรงกัน
       matched: {
         games: intersectGames(user.games, cand.games),
-        styles: intersect(user.styles, cand.styles),
-        genres: intersect(userGenres, candGenres),
-        days: intersect(user.days, cand.days).map(function(id){ return DAY_LABELS[id] || id; }),
-        times: intersect(user.times, cand.times).map(function(id){ return TIME_FULL_LABELS[id] || id; })
+        styles: intersect(user.styles, cand.styles).map(styleDisplay),
+        genres: intersect(userGenres, candGenres).map(genreDisplay),
+        days: intersect(user.days, cand.days).map(function(id){ return dayLabel(id) || id; }),
+        times: intersect(user.times, cand.times).map(function(id){ return timeLabel(id) || id; })
       }
     };
   }
@@ -434,6 +895,9 @@
   };
 
   /* ---------------- profile form (shared by onboarding + edit modal) ---------------- */
+  // เก็บ reference ของ data ที่กำลังกรอกอยู่ล่าสุดไว้ (ทั้งฟอร์ม onboarding และแก้ไขโปรไฟล์)
+  // เพื่อให้สลับภาษาระหว่างกรอกฟอร์มได้โดยไม่ทำข้อมูลที่เลือกไว้แล้วหาย (ดู refreshUIForLanguageChange)
+  var lastFormData = null;
   function buildForm(mount, existing, onSave){
     mount.innerHTML = "";
     var data = {
@@ -449,24 +913,28 @@
       minMatchPct: existing && typeof existing.minMatchPct === "number" ? existing.minMatchPct : 0,
       interestedIn: existing && existing.interestedIn ? existing.interestedIn.slice() : []
     };
+    lastFormData = data;
 
     var form = el("form", {});
 
     // name
     var nameField = el("div", {class:"field"});
-    nameField.appendChild(el("label",{class:"field-label"},["ชื่อ / แท็กที่อยากให้คนอื่นเห็น"]));
-    var nameInput = el("input",{class:"text-input", type:"text", maxlength:"24", placeholder:"เช่น ริว_ninja", value:data.name});
+    nameField.appendChild(el("label",{class:"field-label"},[t("name_field_label")]));
+    var nameInput = el("input",{class:"text-input", type:"text", maxlength:"24", placeholder:t("name_placeholder"), value:data.name});
+    // sync สดๆ ตอนพิมพ์ (ไม่ใช่แค่ตอน submit) เพื่อให้ lastFormData ทันสมัยเสมอ
+    // เผื่อผู้ใช้สลับภาษาระหว่างกรอกฟอร์ม จะได้ไม่ทำชื่อที่พิมพ์ไว้หาย (ดู refreshUIForLanguageChange)
+    nameInput.addEventListener("input", function(){ data.name = nameInput.value; });
     nameField.appendChild(nameInput);
     form.appendChild(nameField);
 
     // gender
     var genderField = el("div",{class:"field"});
-    genderField.appendChild(el("label",{class:"field-label"},["เพศ"]));
+    genderField.appendChild(el("label",{class:"field-label"},[t("gender_field_label")]));
     var genderRow = el("div",{class:"select-row"});
     function renderGender(){
       genderRow.innerHTML = "";
       GENDERS.forEach(function(g){
-        var pill = el("div",{class:"select-pill"+(data.gender===g.id?" active":"")},[g.label]);
+        var pill = el("div",{class:"select-pill"+(data.gender===g.id?" active":"")},[genderLabel(g.id)]);
         pill.addEventListener("click", function(){ data.gender = g.id; renderGender(); });
         genderRow.appendChild(pill);
       });
@@ -477,13 +945,13 @@
 
     // goal
     var goalField = el("div",{class:"field"});
-    goalField.appendChild(el("label",{class:"field-label"},["มาหาเพื่อนเล่นเกมแบบไหน (เลือกได้มากกว่า 1)"]));
+    goalField.appendChild(el("label",{class:"field-label"},[t("goal_field_label")]));
     var goalRow = el("div",{class:"select-row"});
     function renderGoal(){
       goalRow.innerHTML = "";
       GOALS.forEach(function(g){
         var active = data.goal.indexOf(g.id) > -1;
-        var pill = el("div",{class:"select-pill"+(active?" active":"")},[g.label]);
+        var pill = el("div",{class:"select-pill"+(active?" active":"")},[goalLabel(g.id)]);
         pill.addEventListener("click", function(){
           var i = data.goal.indexOf(g.id);
           if(i>-1) data.goal.splice(i,1); else data.goal.push(g.id);
@@ -499,13 +967,13 @@
 
     // สนใจเพศไหน — โชว์เฉพาะตอนเลือก "เป็นมากกว่าเพื่อนก็ได้ถ้าถูกใจ" ด้านบน
     var interestedInField = el("div",{class:"field"});
-    interestedInField.appendChild(el("label",{class:"field-label"},["สนใจเพศไหน (เลือกได้มากกว่า 1)"]));
+    interestedInField.appendChild(el("label",{class:"field-label"},[t("interested_field_label")]));
     var interestedInRow = el("div",{class:"select-row"});
     function renderInterestedIn(){
       interestedInRow.innerHTML = "";
       INTERESTED_IN_OPTIONS.forEach(function(g){
         var active = data.interestedIn.indexOf(g.id) > -1;
-        var pill = el("div",{class:"select-pill"+(active?" active":"")},[g.label]);
+        var pill = el("div",{class:"select-pill"+(active?" active":"")},[genderLabel(g.id)]);
         pill.addEventListener("click", function(){
           var i = data.interestedIn.indexOf(g.id);
           if(i>-1) data.interestedIn.splice(i,1); else data.interestedIn.push(g.id);
@@ -524,7 +992,7 @@
 
     // games
     var gamesField = el("div",{class:"field"});
-    gamesField.appendChild(el("label",{class:"field-label"},["เกมที่เล่นประจำ (เลือกได้หลายเกม)"]));
+    gamesField.appendChild(el("label",{class:"field-label"},[t("games_field_label")]));
     var gamesRow = el("div",{class:"chip-row"});
     function renderGameChips(){
       gamesRow.innerHTML = "";
@@ -539,7 +1007,7 @@
         gamesRow.appendChild(chip);
       });
       var addWrap = el("div",{class:"chip-add"});
-      var addInput = el("input",{type:"text",placeholder:"เพิ่มเกมอื่น..."});
+      var addInput = el("input",{type:"text",placeholder:t("add_game_placeholder")});
       var addBtn = el("button",{type:"button"},["+"]);
       function doAdd(){
         var v = addInput.value.trim();
@@ -556,13 +1024,13 @@
 
     // days
     var daysField = el("div",{class:"field"});
-    daysField.appendChild(el("label",{class:"field-label"},["วันที่มักจะว่างเล่นเกม"]));
+    daysField.appendChild(el("label",{class:"field-label"},[t("days_field_label")]));
     var daysRow = el("div",{class:"chip-row"});
     function renderDays(){
       daysRow.innerHTML = "";
       DAYS.forEach(function(d){
         var active = data.days.indexOf(d.id)>-1;
-        var chip = el("div",{class:"chip"+(active?" active":"")},[d.label]);
+        var chip = el("div",{class:"chip"+(active?" active":"")},[dayLabel(d.id)]);
         chip.addEventListener("click", function(){
           var i = data.days.indexOf(d.id);
           if(i>-1) data.days.splice(i,1); else data.days.push(d.id);
@@ -577,16 +1045,16 @@
 
     // times
     var timesField = el("div",{class:"field"});
-    timesField.appendChild(el("label",{class:"field-label"},["ช่วงเวลาที่ว่างเล่น"]));
+    timesField.appendChild(el("label",{class:"field-label"},[t("times_field_label")]));
     var timesRow = el("div",{class:"chip-row"});
     function renderTimes(){
       timesRow.innerHTML = "";
-      TIMES.forEach(function(t){
-        var active = data.times.indexOf(t.id)>-1;
-        var chip = el("div",{class:"chip"+(active?" active":"")},[t.label]);
+      TIMES.forEach(function(tm){
+        var active = data.times.indexOf(tm.id)>-1;
+        var chip = el("div",{class:"chip"+(active?" active":"")},[timeLabel(tm.id)]);
         chip.addEventListener("click", function(){
-          var i = data.times.indexOf(t.id);
-          if(i>-1) data.times.splice(i,1); else data.times.push(t.id);
+          var i = data.times.indexOf(tm.id);
+          if(i>-1) data.times.splice(i,1); else data.times.push(tm.id);
           renderTimes();
         });
         timesRow.appendChild(chip);
@@ -598,18 +1066,18 @@
 
     // styles
     var stylesField = el("div",{class:"field"});
-    stylesField.appendChild(el("label",{class:"field-label"},["สไตล์การเล่น / บุคลิก (เลือกได้สูงสุด 4)"]));
+    stylesField.appendChild(el("label",{class:"field-label"},[t("styles_field_label")]));
     var stylesRow = el("div",{class:"chip-row"});
     function renderStyles(){
       stylesRow.innerHTML = "";
       STYLES.forEach(function(s){
         var active = data.styles.indexOf(s)>-1;
-        var chip = el("div",{class:"chip"+(active?" active":"")},[s]);
+        var chip = el("div",{class:"chip"+(active?" active":"")},[styleDisplay(s)]);
         chip.addEventListener("click", function(){
           var i = data.styles.indexOf(s);
           if(i>-1) data.styles.splice(i,1);
           else if(data.styles.length<4) data.styles.push(s);
-          else showToast("เลือกได้สูงสุด 4 สไตล์");
+          else showToast(t("styles_max_toast"));
           renderStyles();
         });
         stylesRow.appendChild(chip);
@@ -621,18 +1089,18 @@
 
     // genres
     var genresField = el("div",{class:"field"});
-    genresField.appendChild(el("label",{class:"field-label"},["แนวเกมที่ชอบ (เลือกได้สูงสุด 8)"]));
+    genresField.appendChild(el("label",{class:"field-label"},[t("genres_field_label")]));
     var genresRow = el("div",{class:"chip-row"});
     function renderGenres(){
       genresRow.innerHTML = "";
       GENRES.forEach(function(g){
         var active = data.genres.indexOf(g)>-1;
-        var chip = el("div",{class:"chip"+(active?" active":"")},[g]);
+        var chip = el("div",{class:"chip"+(active?" active":"")},[genreDisplay(g)]);
         chip.addEventListener("click", function(){
           var i = data.genres.indexOf(g);
           if(i>-1) data.genres.splice(i,1);
           else if(data.genres.length<8) data.genres.push(g);
-          else showToast("เลือกได้สูงสุด 4 แนว");
+          else showToast(t("genres_max_toast"));
           renderGenres();
         });
         genresRow.appendChild(chip);
@@ -648,20 +1116,23 @@
 
     // good to know
     var gtkField = el("div",{class:"field"});
-    gtkField.appendChild(el("label",{class:"field-label"},["อยากให้คนที่มาเล่นด้วยรู้ไว้ก่อน (Good to know)"]));
-    var gtkTextarea = el("textarea",{class:"text-input", maxlength:"140", placeholder:"เช่น ชอบพากย์เสียงตลก ๆ ระหว่างเล่น, ต้องออกไอดึกสุดเที่ยงคืน..."});
+    gtkField.appendChild(el("label",{class:"field-label"},[t("gtk_field_label")]));
+    var gtkTextarea = el("textarea",{class:"text-input", maxlength:"140", placeholder:t("gtk_placeholder")});
     gtkTextarea.value = data.goodToKnow;
     var charCount = el("div",{class:"char-count"},[String(data.goodToKnow.length)+"/140"]);
-    gtkTextarea.addEventListener("input", function(){ charCount.textContent = gtkTextarea.value.length+"/140"; });
+    gtkTextarea.addEventListener("input", function(){
+      charCount.textContent = gtkTextarea.value.length+"/140";
+      data.goodToKnow = gtkTextarea.value;
+    });
     gtkField.appendChild(gtkTextarea);
     gtkField.appendChild(charCount);
     form.appendChild(gtkField);
 
-    var errorBox = el("div",{class:"form-error"},["กรอกชื่อ และเลือกอย่างน้อย 1 เกม, 1 วัน, 1 ช่วงเวลา ก่อนนะ"]);
+    var errorBox = el("div",{class:"form-error"},[t("form_error_required")]);
     form.appendChild(errorBox);
 
     var actions = el("div",{class:"form-actions"});
-    var saveBtn = el("button",{class:"btn btn-primary", type:"submit"},[existing?"บันทึกการเปลี่ยนแปลง":"เริ่มหาเพื่อนเล่น"]);
+    var saveBtn = el("button",{class:"btn btn-primary", type:"submit"},[existing?t("save_changes_btn"):t("start_matching_btn")]);
     actions.appendChild(saveBtn);
     form.appendChild(actions);
 
@@ -705,9 +1176,9 @@
 
   function buildReputationWidget(cand){
     var wrap = el("div",{class:"rep-widget"});
-    var upBtn = el("button",{type:"button",class:"rep-btn rep-up",title:"เพิ่มคะแนนให้"},["👍"]);
+    var upBtn = el("button",{type:"button",class:"rep-btn rep-up",title:t("vote_up_title")},["👍"]);
     var scoreEl = el("span",{class:"rep-score"},[String(cand.reputation)]);
-    var downBtn = el("button",{type:"button",class:"rep-btn rep-down",title:"ลดคะแนน"},["👎"]);
+    var downBtn = el("button",{type:"button",class:"rep-btn rep-down",title:t("vote_down_title")},["👎"]);
 
     function refresh(){
       var master = findCandidate(cand.id) || cand;
@@ -733,7 +1204,7 @@
         }
         notifyReputationChange(cand.id);
       }).catch(function(err){
-        showToast(err.message || "โหวตไม่สำเร็จ ลองใหม่อีกครั้ง");
+        showToast(err.message || t("toast_vote_failed"));
       }).finally(function(){
         upBtn.disabled = false;
         downBtn.disabled = false;
@@ -762,11 +1233,11 @@
       nameRow.insertBefore(dot, nameRow.firstChild);
     }
     if(state.profile && state.profile.minMatchPct > 0 && score.total < state.profile.minMatchPct){
-      var warnMark = el("span",{class:"match-warn", title:"% ตรงกัน ("+score.total+"%) ต่ำกว่าระดับขั้นต่ำที่คุณตั้งไว้ ("+state.profile.minMatchPct+"%) — ยังทักไปคุยได้ปกติ"},["⚠️"]);
+      var warnMark = el("span",{class:"match-warn", title:t("match_warn_title", {pct:score.total, min:state.profile.minMatchPct})},["⚠️"]);
       nameRow.appendChild(warnMark);
     }
     idBox.appendChild(nameRow);
-    idBox.appendChild(el("div",{class:"p-card-status"},[(online?"ออนไลน์ตอนนี้":"ออฟไลน์")+" · "+GENDER_LABELS[cand.gender]]));
+    idBox.appendChild(el("div",{class:"p-card-status"},[(online?t("online_now"):t("offline"))+" · "+genderLabel(cand.gender)]));
     idBox.appendChild(buildReputationWidget(cand));
     top.appendChild(idBox);
     var dial = el("div",{class:"match-dial"});
@@ -777,8 +1248,8 @@
     var pinned = isPinned(cand.id);
     var pinBtn = el("button",{
       type:"button", class:"icon-btn pin-btn" + (pinned ? " active" : ""),
-      title: pinned ? "เลิกปักหมุด" : "ปักหมุดไว้บนสุด",
-      "aria-label": pinned ? "เลิกปักหมุด" : "ปักหมุดไว้บนสุด"
+      title: pinned ? t("unpin") : t("pin_top"),
+      "aria-label": pinned ? t("unpin") : t("pin_top")
     },["📌"]);
     pinBtn.addEventListener("click", function(e){
       e.stopPropagation();
@@ -793,31 +1264,31 @@
     card.appendChild(gamesRow);
 
     var stylesRow = el("div",{class:"p-card-games"});
-    cand.styles.forEach(function(s){ stylesRow.appendChild(el("span",{class:"tag style-tag"},[s])); });
+    cand.styles.forEach(function(s){ stylesRow.appendChild(el("span",{class:"tag style-tag"},[styleDisplay(s)])); });
     card.appendChild(stylesRow);
 
     if(cand.genres && cand.genres.length){
       var genresRow = el("div",{class:"p-card-games"});
-      cand.genres.forEach(function(g){ genresRow.appendChild(el("span",{class:"tag genre-tag"},[g])); });
+      cand.genres.forEach(function(g){ genresRow.appendChild(el("span",{class:"tag genre-tag"},[genreDisplay(g)])); });
       card.appendChild(genresRow);
     }
 
     var metaRow = el("div",{class:"p-card-games"});
-    (cand.goal||[]).forEach(function(gid){ metaRow.appendChild(el("span",{class:"tag goal-tag"},[GOAL_LABELS[gid]||gid])); });
+    (cand.goal||[]).forEach(function(gid){ metaRow.appendChild(el("span",{class:"tag goal-tag"},[goalLabel(gid)||gid])); });
     if((cand.goal||[]).indexOf("open")>-1 && cand.interestedIn && cand.interestedIn.length){
-      var interestedLabel = cand.interestedIn.map(function(g){ return INTERESTED_IN_LABELS[g]||g; }).join("/");
-      metaRow.appendChild(el("span",{class:"tag goal-tag"},["สนใจ: "+interestedLabel]));
+      var interestedLabel = cand.interestedIn.map(function(g){ return genderLabel(g)||g; }).join("/");
+      metaRow.appendChild(el("span",{class:"tag goal-tag"},[t("interested_prefix", {label: interestedLabel})]));
     }
     card.appendChild(metaRow);
 
     var breakdown = el("div",{class:"breakdown"});
     var showMismatch = isShowMismatch();
     [
-      {label:"เกม", pct:score.breakdown.games, diff:score.mismatch.games, matched:score.matched.games},
-      {label:"วัน", pct:score.breakdown.day, diff:score.mismatch.days, matched:score.matched.days},
-      {label:"เวลา", pct:score.breakdown.time, diff:score.mismatch.times, matched:score.matched.times},
-      {label:"สไตล์", pct:score.breakdown.style, diff:score.mismatch.styles, matched:score.matched.styles},
-      {label:"แนวเกม", pct:score.breakdown.genre, diff:score.mismatch.genres, matched:score.matched.genres}
+      {label:t("label_games"), pct:score.breakdown.games, diff:score.mismatch.games, matched:score.matched.games},
+      {label:t("label_days"), pct:score.breakdown.day, diff:score.mismatch.days, matched:score.matched.days},
+      {label:t("label_times"), pct:score.breakdown.time, diff:score.mismatch.times, matched:score.matched.times},
+      {label:t("label_styles"), pct:score.breakdown.style, diff:score.mismatch.styles, matched:score.matched.styles},
+      {label:t("label_genres"), pct:score.breakdown.genre, diff:score.mismatch.genres, matched:score.matched.genres}
     ].forEach(function(c){
       var row = el("div",{class:"breakdown-row"});
       row.appendChild(el("span",{class:"breakdown-label"},[c.label]));
@@ -831,13 +1302,13 @@
 
       // จุดที่ตรงกัน (สีเขียว) โชว์เสมอไม่ว่าปุ่มซ่อนจะเปิดหรือปิด
       if(!c.diff.length){
-        breakdown.appendChild(el("div",{class:"breakdown-detail match-full"},["ตรงกันหมดทุกอย่าง ✓"]));
+        breakdown.appendChild(el("div",{class:"breakdown-detail match-full"},[t("match_all")]));
       } else if(c.matched.length){
-        breakdown.appendChild(el("div",{class:"breakdown-detail match-full"},["ตรงกัน: ", el("b",{},[c.matched.join(", ")])]));
+        breakdown.appendChild(el("div",{class:"breakdown-detail match-full"},[t("match_prefix"), el("b",{},[c.matched.join(", ")])]));
       }
       // จุดที่ไม่ตรงกัน ซ่อน/แสดงตามปุ่มที่ผู้ใช้ตั้งไว้
       if(showMismatch && c.diff.length){
-        breakdown.appendChild(el("div",{class:"breakdown-detail"},["ไม่ตรงกัน: ", el("b",{},[c.diff.join(", ")])]));
+        breakdown.appendChild(el("div",{class:"breakdown-detail"},[t("mismatch_prefix"), el("b",{},[c.diff.join(", ")])]));
       }
     });
     card.appendChild(breakdown);
@@ -846,7 +1317,7 @@
       card.appendChild(el("div",{class:"good-to-know"},["“"+cand.goodToKnow+"”"]));
     }
 
-    var cta = el("div",{class:"card-cta"},["ทักไปคุย"]);
+    var cta = el("div",{class:"card-cta"},[t("cta_message")]);
     cta.addEventListener("click", function(){ openChat(cand); });
     card.appendChild(cta);
 
@@ -856,12 +1327,12 @@
   /* ---------------- lobby rendering ---------------- */
   function renderLobby(){
     var profile = state.profile;
-    document.getElementById("lobbySub").textContent = "สวัสดี " + profile.name + " กำลังจับคู่จากเกม เวลา และสไตล์ของคุณ";
+    document.getElementById("lobbySub").textContent = t("hello_lobby_sub", {name: profile.name});
 
     var gameFilter = document.getElementById("gameFilter");
     var currentFilterVal = gameFilter.value || "all";
     gameFilter.innerHTML = "";
-    gameFilter.appendChild(el("option",{value:"all"},["ทุกเกม"]));
+    gameFilter.appendChild(el("option",{value:"all"},[t("all_games_option")]));
     // รวมเกมที่พิมพ์เองมาแบบไม่ซ้ำกับรายการมาตรฐาน โดยเทียบแบบไม่สนตัวพิมพ์เล็กใหญ่/ช่องว่าง
     // กันไม่ให้ dropdown มีตัวเลือกซ้ำ เช่น "Dota 2" กับ "dota 2" แยกกันคนละอัน
     var seenGameKeys = GAMES.map(normGame);
@@ -887,7 +1358,7 @@
 
   function updateMinMatchLabel(pct){
     var label = document.getElementById("minMatchValue");
-    if(label) label.textContent = pct > 0 ? (pct + "%+") : "ไม่กำหนด";
+    if(label) label.textContent = pct > 0 ? (pct + "%+") : t("minmatch_unset");
   }
 
   // ทำให้เส้นหลอดเลื่อนมีสีไล่ตามค่า % ที่ตั้งไว้ ไม่ใช่แค่จุดกลมสีส้ม
@@ -905,7 +1376,7 @@
       state.profile.minMatchPct = pct;
       renderGrid();
     }).catch(function(err){
-      showToast(err.message || "อัปเดตไม่สำเร็จ ลองใหม่อีกครั้ง");
+      showToast(err.message || t("toast_update_failed"));
       renderLobby();
     });
   }
@@ -941,12 +1412,12 @@
       return b.score.total - a.score.total;
     });
 
-    document.getElementById("queueCount").textContent = scored.length + " คนในคิว";
+    document.getElementById("queueCount").textContent = t("queue_count", {count: scored.length});
 
     var grid = document.getElementById("cardGrid");
     grid.innerHTML = "";
     if(scored.length===0){
-      grid.appendChild(el("div",{class:"empty-state"},["ไม่พบคนที่ตรงกับตัวกรองนี้ ลองเปลี่ยนคำค้นหรือเกมดูนะ"]));
+      grid.appendChild(el("div",{class:"empty-state"},[t("empty_state")]));
       return;
     }
     scored.forEach(function(item){ grid.appendChild(renderCard(item.cand, item.score)); });
@@ -959,7 +1430,7 @@
     meChip.appendChild(makeAvatar(state.profile.name, 26));
     meChip.appendChild(el("span",{class:"me-name"},[state.profile.name]));
     if(typeof state.profile.reputation === "number"){
-      meChip.appendChild(el("span",{class:"me-reputation",title:"คะแนน reputation ของคุณ"},["★ "+state.profile.reputation]));
+      meChip.appendChild(el("span",{class:"me-reputation",title:t("rep_title")},["★ "+state.profile.reputation]));
     }
   }
 
@@ -975,7 +1446,7 @@
     av.style.background = hashColor(cand.name);
     av.textContent = initials(cand.name);
     document.getElementById("chatName").textContent = displayName(cand);
-    document.getElementById("chatStatus").textContent = (state.onlineIds.has(cand.id) ? "ออนไลน์ตอนนี้" : "ออฟไลน์") + " · " + GENDER_LABELS[cand.gender];
+    document.getElementById("chatStatus").textContent = (state.onlineIds.has(cand.id) ? t("online_now") : t("offline")) + " · " + genderLabel(cand.gender);
     var chatGtk = document.getElementById("chatGoodToKnow");
     var hasGtk = cand.goodToKnow && cand.goodToKnow.trim();
     chatGtk.textContent = hasGtk ? "“"+cand.goodToKnow+"”" : "";
@@ -986,7 +1457,7 @@
 
     var muteBtn = document.getElementById("muteChatBtn");
     muteBtn.classList.toggle("active", isMuted(cand.id));
-    muteBtn.title = isMuted(cand.id) ? "เปิดแจ้งเตือนคนนี้อีกครั้ง" : "ปิดแจ้งเตือนคนนี้";
+    muteBtn.title = isMuted(cand.id) ? t("unmute_title") : t("mute_this_person");
 
     document.getElementById("chatPanel").hidden = false;
     document.getElementById("scrim").hidden = false;
@@ -994,7 +1465,7 @@
 
     var box = document.getElementById("chatMessages");
     box.innerHTML = "";
-    box.appendChild(el("div",{class:"p-card-status",style:"text-align:center;padding:14px;"},["กำลังโหลดข้อความ..."]));
+    box.appendChild(el("div",{class:"p-card-status",style:"text-align:center;padding:14px;"},[t("loading_messages")]));
 
     apiFetch("/chat/" + cand.id + "/messages").then(function(data){
       if(state.activeChatId !== cand.id) return;
@@ -1002,7 +1473,7 @@
     }).catch(function(err){
       if(state.activeChatId !== cand.id) return;
       box.innerHTML = "";
-      showToast(err.message || "โหลดข้อความไม่สำเร็จ");
+      showToast(err.message || t("toast_load_messages_failed"));
     });
   }
 
@@ -1084,7 +1555,7 @@
     if(!state.activeChatId || !text || !state.socket) return;
     var to = state.activeChatId;
     state.socket.emit("chat:send", {to: to, content: text}, function(ack){
-      if(!ack || !ack.ok){ showToast((ack && ack.error) || "ส่งข้อความไม่สำเร็จ"); }
+      if(!ack || !ack.ok){ showToast((ack && ack.error) || t("toast_send_failed")); }
     });
   }
 
@@ -1099,9 +1570,9 @@
       closeChat();
       state.candidates = state.candidates.filter(function(c){ return c.id !== candId; });
       if(!document.getElementById("viewLobby").hidden) renderGrid();
-      showToast((cand ? displayName(cand) : "ผู้ใช้นี้") + " ถูกบล็อกแล้ว");
+      showToast(t("toast_block_success", {name: cand ? displayName(cand) : t("fallback_this_user")}));
     }).catch(function(err){
-      showToast(err.message || "บล็อกไม่สำเร็จ ลองใหม่อีกครั้ง");
+      showToast(err.message || t("toast_block_failed"));
     }).finally(function(){
       blockBtn.disabled = false;
     });
@@ -1110,13 +1581,13 @@
   function renderBlockedList(){
     var mount = document.getElementById("blockedListMount");
     mount.innerHTML = "";
-    mount.appendChild(el("div",{class:"p-card-status",style:"text-align:center;padding:14px;"},["กำลังโหลด..."]));
+    mount.appendChild(el("div",{class:"p-card-status",style:"text-align:center;padding:14px;"},[t("loading")]));
 
     apiFetch("/users/blocked").then(function(data){
       mount.innerHTML = "";
       var blocked = data.blocked || [];
       if(blocked.length === 0){
-        mount.appendChild(el("div",{class:"blocked-empty"},["คุณยังไม่ได้บล็อกใครไว้"]));
+        mount.appendChild(el("div",{class:"blocked-empty"},[t("no_blocked_users")]));
         return;
       }
       var list = el("div",{class:"blocked-list"});
@@ -1124,17 +1595,17 @@
         var row = el("div",{class:"blocked-item"});
         row.appendChild(makeAvatar(b.name, 34));
         row.appendChild(el("div",{class:"name"},[displayName(b)]));
-        var unblockBtn = el("button",{class:"btn btn-ghost btn-sm", type:"button"},["เลิกบล็อก"]);
+        var unblockBtn = el("button",{class:"btn btn-ghost btn-sm", type:"button"},[t("unblock_btn")]);
         unblockBtn.addEventListener("click", function(){
           unblockBtn.disabled = true;
           apiFetch("/users/" + b.id + "/unblock", {method:"POST"}).then(function(){
-            showToast(displayName(b) + " ถูกเลิกบล็อกแล้ว");
+            showToast(t("toast_unblock_success", {name: displayName(b)}));
             renderBlockedList();
             loadCandidates().then(function(){
               if(!document.getElementById("viewLobby").hidden) renderGrid();
             }).catch(function(){});
           }).catch(function(err){
-            showToast(err.message || "เลิกบล็อกไม่สำเร็จ ลองใหม่อีกครั้ง");
+            showToast(err.message || t("toast_unblock_failed"));
             unblockBtn.disabled = false;
           });
         });
@@ -1144,7 +1615,7 @@
       mount.appendChild(list);
     }).catch(function(err){
       mount.innerHTML = "";
-      mount.appendChild(el("div",{class:"blocked-empty"},[err.message || "โหลดรายชื่อไม่สำเร็จ"]));
+      mount.appendChild(el("div",{class:"blocked-empty"},[err.message || t("toast_load_list_failed")]));
     });
   }
 
@@ -1162,7 +1633,7 @@
       if(!document.getElementById("viewLobby").hidden) renderGrid();
       if(state.activeChatId === payload.userId){
         var cand = findCandidate(payload.userId);
-        document.getElementById("chatStatus").textContent = (payload.online ? "ออนไลน์ตอนนี้" : "ออฟไลน์") + " · " + (cand ? GENDER_LABELS[cand.gender] : "");
+        document.getElementById("chatStatus").textContent = (payload.online ? t("online_now") : t("offline")) + " · " + (cand ? genderLabel(cand.gender) : "");
       }
     });
 
@@ -1174,7 +1645,7 @@
       }
       if(m.from === "them" && (!isOpenChat || document.hidden) && !isMuted(otherId)){
         var cand = findCandidate(otherId);
-        showNotification("ข้อความใหม่จาก " + (cand ? displayName(cand) : "เพื่อนใหม่"), m.text, function(){
+        showNotification(t("new_message_from", {name: cand ? displayName(cand) : t("fallback_new_friend")}), m.text, function(){
           if(cand) openChat(cand);
         });
       }
@@ -1214,7 +1685,7 @@
     list.innerHTML = "";
     var conversations = state.conversations || [];
     if(conversations.length === 0){
-      list.appendChild(el("div",{class:"conversations-empty"},["ยังไม่มีแชทกับใครเลย"]));
+      list.appendChild(el("div",{class:"conversations-empty"},[t("no_conversations")]));
       return;
     }
     conversations.forEach(function(conv){
@@ -1222,7 +1693,7 @@
       item.appendChild(makeAvatar(conv.name, 36));
       var textCol = el("div",{class:"conv-text"});
       textCol.appendChild(el("div",{class:"conv-name"},[displayName(conv)]));
-      var preview = (conv.lastMessageFromMe ? "คุณ: " : "") + (conv.lastMessage || "");
+      var preview = (conv.lastMessageFromMe ? t("you_prefix") : "") + (conv.lastMessage || "");
       textCol.appendChild(el("div",{class:"conv-last"},[preview]));
       item.appendChild(textCol);
       item.addEventListener("click", function(){
@@ -1239,7 +1710,7 @@
     if(!cand){
       // คนคนนี้อาจไม่อยู่ใน state.candidates แล้ว (เช่นถูกกรองออกไปด้วยเหตุผลอื่น) —
       // สร้างข้อมูลสำรองขั้นต่ำไว้ให้เปิดแชทได้ ไม่ให้ทั้งหน้าค้าง
-      cand = {id:id, name:name||"ผู้ใช้", gender:"unspecified", goodToKnow:"", reputation:100, myVote:0,
+      cand = {id:id, name:name||t("fallback_user"), gender:"unspecified", goodToKnow:"", reputation:100, myVote:0,
         games:[], styles:[], genres:[], days:[], times:[], goal:[]};
     }
     openChat(cand);
@@ -1269,14 +1740,14 @@
     var form = el("form", {});
 
     var emailField = el("div",{class:"field"});
-    emailField.appendChild(el("label",{class:"field-label"},["อีเมล"]));
+    emailField.appendChild(el("label",{class:"field-label"},[t("email_label")]));
     var emailInput = el("input",{class:"text-input", type:"email", placeholder:"you@email.com", autocomplete:"email"});
     emailField.appendChild(emailInput);
     form.appendChild(emailField);
 
     var passField = el("div",{class:"field"});
-    passField.appendChild(el("label",{class:"field-label"},["รหัสผ่าน"]));
-    var passInput = el("input",{class:"text-input", type:"password", placeholder:"อย่างน้อย 6 ตัวอักษร",
+    passField.appendChild(el("label",{class:"field-label"},[t("password_label")]));
+    var passInput = el("input",{class:"text-input", type:"password", placeholder:t("password_placeholder"),
       autocomplete: mode==="signup" ? "new-password" : "current-password"});
     passField.appendChild(passInput);
     form.appendChild(passField);
@@ -1284,13 +1755,13 @@
     var confirmInput = null;
     if(mode === "signup"){
       var confirmField = el("div",{class:"field"});
-      confirmField.appendChild(el("label",{class:"field-label"},["ยืนยันรหัสผ่าน"]));
-      confirmInput = el("input",{class:"text-input", type:"password", placeholder:"พิมพ์รหัสผ่านอีกครั้ง", autocomplete:"new-password"});
+      confirmField.appendChild(el("label",{class:"field-label"},[t("confirm_password_label")]));
+      confirmInput = el("input",{class:"text-input", type:"password", placeholder:t("confirm_password_placeholder"), autocomplete:"new-password"});
       confirmField.appendChild(confirmInput);
       form.appendChild(confirmField);
     } else {
       var forgotWrap = el("div",{style:"text-align:right;margin-bottom:22px;"});
-      var forgotLink = el("button",{class:"auth-forgot-link", type:"button"},["ลืมรหัสผ่าน?"]);
+      var forgotLink = el("button",{class:"auth-forgot-link", type:"button"},[t("forgot_password_link")]);
       forgotLink.addEventListener("click", function(){ renderForgotPasswordForm(emailInput.value.trim()); });
       forgotWrap.appendChild(forgotLink);
       form.appendChild(forgotWrap);
@@ -1301,7 +1772,7 @@
     function showError(msg){ errorBox.textContent = msg; errorBox.classList.add("show"); }
 
     var actions = el("div",{class:"form-actions"});
-    var submitBtn = el("button",{class:"btn btn-primary btn-block", type:"submit"},[mode==="signup"?"สมัครสมาชิก":"เข้าสู่ระบบ"]);
+    var submitBtn = el("button",{class:"btn btn-primary btn-block", type:"submit"},[mode==="signup"?t("tab_signup"):t("tab_login")]);
     actions.appendChild(submitBtn);
     form.appendChild(actions);
 
@@ -1311,9 +1782,9 @@
       var email = emailInput.value.trim().toLowerCase();
       var pass = passInput.value;
 
-      if(!email || !EMAIL_RE.test(email)){ showError("กรอกอีเมลให้ถูกต้อง"); return; }
-      if(!pass || pass.length < 6){ showError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"); return; }
-      if(mode === "signup" && pass !== confirmInput.value){ showError("รหัสผ่านยืนยันไม่ตรงกัน"); return; }
+      if(!email || !EMAIL_RE.test(email)){ showError(t("err_invalid_email")); return; }
+      if(!pass || pass.length < 6){ showError(t("err_password_length")); return; }
+      if(mode === "signup" && pass !== confirmInput.value){ showError(t("err_password_mismatch")); return; }
 
       submitBtn.disabled = true;
       var path = mode === "signup" ? "/auth/signup" : "/auth/login";
@@ -1321,7 +1792,7 @@
         if(mode === "signup"){
           showVerificationPending(email);
         } else {
-          showToast("เข้าสู่ระบบสำเร็จ!");
+          showToast(t("toast_login_success"));
           afterLogin();
         }
       }).catch(function(err){
@@ -1329,7 +1800,7 @@
           showVerificationPending(err.email || email);
           return;
         }
-        showError(err.message || "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
+        showError(err.message || t("err_generic_retry"));
       }).finally(function(){
         submitBtn.disabled = false;
       });
@@ -1347,23 +1818,23 @@
 
     var box = el("div", {});
     box.appendChild(el("p", {style:"color:var(--text-muted);font-size:13.5px;line-height:1.6;margin-bottom:18px;"}, [
-      "ส่งอีเมลยืนยันไปที่ ", el("b",{style:"color:var(--text);"},[email]), " แล้ว กรุณาเปิดกล่องจดหมายแล้วกดลิงก์ยืนยันก่อนเข้าสู่ระบบ (เช็คโฟลเดอร์สแปมด้วยถ้าไม่เจอ)"
+      t("verification_sent_prefix"), el("b",{style:"color:var(--text);"},[email]), t("verification_sent_suffix")
     ]));
 
-    var resendBtn = el("button", {class:"btn btn-ghost btn-block", type:"button"}, ["ส่งอีเมลยืนยันอีกครั้ง"]);
+    var resendBtn = el("button", {class:"btn btn-ghost btn-block", type:"button"}, [t("resend_verification_btn")]);
     resendBtn.addEventListener("click", function(){
       resendBtn.disabled = true;
       apiFetch("/auth/resend-verification", {method:"POST", body:{email:email}}).then(function(data){
-        showToast(data.message || "ส่งอีเมลยืนยันใหม่แล้ว");
+        showToast(data.message || t("toast_resend_success"));
       }).catch(function(err){
-        showToast(err.message || "ส่งอีเมลไม่สำเร็จ");
+        showToast(err.message || t("toast_resend_failed"));
       }).finally(function(){
         resendBtn.disabled = false;
       });
     });
     box.appendChild(resendBtn);
 
-    var backBtn = el("button", {class:"btn btn-ghost btn-block", type:"button", style:"margin-top:10px;"}, ["กลับไปหน้าเข้าสู่ระบบ"]);
+    var backBtn = el("button", {class:"btn btn-ghost btn-block", type:"button", style:"margin-top:10px;"}, [t("back_to_login_btn")]);
     backBtn.addEventListener("click", function(){ renderAuthForm("login"); });
     box.appendChild(backBtn);
 
@@ -1379,11 +1850,11 @@
 
     var form = el("form", {});
     form.appendChild(el("p", {style:"color:var(--text-muted);font-size:13.5px;line-height:1.6;margin-bottom:18px;"}, [
-      "กรอกอีเมลที่ใช้สมัคร แล้วเราจะส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้"
+      t("forgot_password_desc")
     ]));
 
     var emailField = el("div",{class:"field"});
-    emailField.appendChild(el("label",{class:"field-label"},["อีเมล"]));
+    emailField.appendChild(el("label",{class:"field-label"},[t("email_label")]));
     var emailInput = el("input",{class:"text-input", type:"email", placeholder:"you@email.com", autocomplete:"email", value: prefillEmail || ""});
     emailField.appendChild(emailInput);
     form.appendChild(emailField);
@@ -1393,7 +1864,7 @@
     function showError(msg){ errorBox.textContent = msg; errorBox.classList.add("show"); }
 
     var actions = el("div",{class:"form-actions"});
-    var submitBtn = el("button",{class:"btn btn-primary btn-block", type:"submit"},["ส่งลิงก์ตั้งรหัสผ่านใหม่"]);
+    var submitBtn = el("button",{class:"btn btn-primary btn-block", type:"submit"},[t("send_reset_link_btn")]);
     actions.appendChild(submitBtn);
     form.appendChild(actions);
 
@@ -1401,28 +1872,28 @@
       e.preventDefault();
       errorBox.classList.remove("show");
       var email = emailInput.value.trim().toLowerCase();
-      if(!email || !EMAIL_RE.test(email)){ showError("กรอกอีเมลให้ถูกต้อง"); return; }
+      if(!email || !EMAIL_RE.test(email)){ showError(t("err_invalid_email")); return; }
 
       submitBtn.disabled = true;
       apiFetch("/auth/forgot-password", {method:"POST", body:{email:email}}).then(function(data){
         mount.innerHTML = "";
         var box = el("div", {});
         box.appendChild(el("p", {style:"color:var(--text-muted);font-size:13.5px;line-height:1.6;margin-bottom:18px;"}, [
-          data.message || "ถ้าอีเมลนี้อยู่ในระบบ จะส่งลิงก์ตั้งรหัสผ่านใหม่ไปให้แล้ว"
+          data.message || t("forgot_password_sent_fallback")
         ]));
-        var backBtn = el("button", {class:"btn btn-ghost btn-block", type:"button"}, ["กลับไปหน้าเข้าสู่ระบบ"]);
+        var backBtn = el("button", {class:"btn btn-ghost btn-block", type:"button"}, [t("back_to_login_btn")]);
         backBtn.addEventListener("click", function(){ renderAuthForm("login"); });
         box.appendChild(backBtn);
         mount.appendChild(box);
       }).catch(function(err){
-        showError(err.message || "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
+        showError(err.message || t("err_generic_retry"));
         submitBtn.disabled = false;
       });
     });
 
     mount.appendChild(form);
 
-    var backLink = el("button", {class:"btn btn-ghost btn-block", type:"button", style:"margin-top:10px;"}, ["กลับไปหน้าเข้าสู่ระบบ"]);
+    var backLink = el("button", {class:"btn btn-ghost btn-block", type:"button", style:"margin-top:10px;"}, [t("back_to_login_btn")]);
     backLink.addEventListener("click", function(){ renderAuthForm("login"); });
     mount.appendChild(backLink);
   }
@@ -1436,18 +1907,18 @@
 
     var form = el("form", {});
     form.appendChild(el("p", {style:"color:var(--text-muted);font-size:13.5px;line-height:1.6;margin-bottom:18px;"}, [
-      "ตั้งรหัสผ่านใหม่สำหรับบัญชีของคุณ"
+      t("reset_password_desc")
     ]));
 
     var passField = el("div",{class:"field"});
-    passField.appendChild(el("label",{class:"field-label"},["รหัสผ่านใหม่"]));
-    var passInput = el("input",{class:"text-input", type:"password", placeholder:"อย่างน้อย 6 ตัวอักษร", autocomplete:"new-password"});
+    passField.appendChild(el("label",{class:"field-label"},[t("new_password_label")]));
+    var passInput = el("input",{class:"text-input", type:"password", placeholder:t("password_placeholder"), autocomplete:"new-password"});
     passField.appendChild(passInput);
     form.appendChild(passField);
 
     var confirmField = el("div",{class:"field"});
-    confirmField.appendChild(el("label",{class:"field-label"},["ยืนยันรหัสผ่านใหม่"]));
-    var confirmInput = el("input",{class:"text-input", type:"password", placeholder:"พิมพ์รหัสผ่านอีกครั้ง", autocomplete:"new-password"});
+    confirmField.appendChild(el("label",{class:"field-label"},[t("confirm_new_password_label")]));
+    var confirmInput = el("input",{class:"text-input", type:"password", placeholder:t("confirm_password_placeholder"), autocomplete:"new-password"});
     confirmField.appendChild(confirmInput);
     form.appendChild(confirmField);
 
@@ -1456,7 +1927,7 @@
     function showError(msg){ errorBox.textContent = msg; errorBox.classList.add("show"); }
 
     var actions = el("div",{class:"form-actions"});
-    var submitBtn = el("button",{class:"btn btn-primary btn-block", type:"submit"},["ตั้งรหัสผ่านใหม่"]);
+    var submitBtn = el("button",{class:"btn btn-primary btn-block", type:"submit"},[t("set_new_password_btn")]);
     actions.appendChild(submitBtn);
     form.appendChild(actions);
 
@@ -1464,22 +1935,22 @@
       e.preventDefault();
       errorBox.classList.remove("show");
       var pass = passInput.value;
-      if(!pass || pass.length < 6){ showError("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"); return; }
-      if(pass !== confirmInput.value){ showError("รหัสผ่านยืนยันไม่ตรงกัน"); return; }
+      if(!pass || pass.length < 6){ showError(t("err_password_length")); return; }
+      if(pass !== confirmInput.value){ showError(t("err_password_mismatch")); return; }
 
       submitBtn.disabled = true;
       apiFetch("/auth/reset-password", {method:"POST", body:{token:token, password:pass}}).then(function(){
-        showToast("ตั้งรหัสผ่านใหม่สำเร็จ! เข้าสู่ระบบให้อัตโนมัติแล้ว");
+        showToast(t("toast_reset_success"));
         afterLogin();
       }).catch(function(err){
-        showError(err.message || "ตั้งรหัสผ่านใหม่ไม่สำเร็จ ลองขอลิงก์ใหม่อีกครั้ง");
+        showError(err.message || t("err_reset_failed"));
         submitBtn.disabled = false;
       });
     });
 
     mount.appendChild(form);
 
-    var backLink = el("button", {class:"btn btn-ghost btn-block", type:"button", style:"margin-top:10px;"}, ["กลับไปหน้าเข้าสู่ระบบ"]);
+    var backLink = el("button", {class:"btn btn-ghost btn-block", type:"button", style:"margin-top:10px;"}, [t("back_to_login_btn")]);
     backLink.addEventListener("click", function(){ renderAuthForm("login"); });
     mount.appendChild(backLink);
   }
@@ -1509,7 +1980,7 @@
       checkNewMatches();
       startCandidatePolling();
     }).catch(function(err){
-      showToast(err.message || "โหลดรายชื่อไม่สำเร็จ");
+      showToast(err.message || t("toast_load_list_failed"));
     });
     loadConversations();
   }
@@ -1527,10 +1998,10 @@
         buildForm(document.getElementById("onboardFormMount"), null, function(data){
           return apiFetch("/profile", {method:"PUT", body:data}).then(function(){
             state.profile = data;
-            showToast("บันทึกโปรไฟล์แล้ว! กำลังหาคู่ให้...");
+            showToast(t("toast_save_profile_success"));
             goToLobby();
           }).catch(function(err){
-            showToast(err.message || "บันทึกโปรไฟล์ไม่สำเร็จ");
+            showToast(err.message || t("toast_save_profile_failed"));
           });
         });
       }
@@ -1560,11 +2031,11 @@
     var verified = params.get("verified");
     var verifyError = params.get("verifyError");
     if(login){
-      showToast("เข้าสู่ระบบด้วย Discord สำเร็จ!");
+      showToast(t("toast_discord_login_success"));
     } else if(loginError){
       showToast(loginError);
     } else if(verified){
-      showToast("ยืนยันอีเมลสำเร็จ! เข้าสู่ระบบให้อัตโนมัติแล้ว");
+      showToast(t("toast_email_verified"));
     } else if(verifyError){
       showToast(verifyError);
     }
@@ -1611,10 +2082,10 @@
         buildForm(document.getElementById("onboardFormMount"), null, function(data){
           return apiFetch("/profile", {method:"PUT", body:data}).then(function(){
             state.profile = data;
-            showToast("บันทึกโปรไฟล์แล้ว! กำลังหาคู่ให้...");
+            showToast(t("toast_save_profile_success"));
             goToLobby();
           }).catch(function(err){
-            showToast(err.message || "บันทึกโปรไฟล์ไม่สำเร็จ");
+            showToast(err.message || t("toast_save_profile_failed"));
           });
         });
       }
@@ -1630,6 +2101,9 @@
   document.getElementById("themeToggleBtn").addEventListener("click", function(){
     applyTheme(getCurrentTheme() === "dark" ? "light" : "dark");
   });
+  document.getElementById("langToggleBtn").addEventListener("click", function(){
+    applyLanguage(getCurrentLang() === "en" ? "th" : "en");
+  });
   document.getElementById("notifToggleBtn").addEventListener("click", toggleNotifPermission);
   document.getElementById("editProfileBtn").addEventListener("click", function(){
     buildForm(document.getElementById("modalFormMount"), state.profile, function(data){
@@ -1637,12 +2111,12 @@
         state.profile = data;
         document.getElementById("profileModal").hidden = true;
         document.getElementById("scrim").hidden = true;
-        showToast("อัปเดตโปรไฟล์แล้ว");
+        showToast(t("toast_update_profile_success"));
         renderMeChip();
         renderLobby();
         checkNewMatches();
       }).catch(function(err){
-        showToast(err.message || "อัปเดตโปรไฟล์ไม่สำเร็จ");
+        showToast(err.message || t("toast_update_profile_failed"));
       });
     });
     document.getElementById("profileModal").hidden = false;
@@ -1662,8 +2136,8 @@
     var nowMuted = toggleMute(state.activeChatId);
     var btn = document.getElementById("muteChatBtn");
     btn.classList.toggle("active", nowMuted);
-    btn.title = nowMuted ? "เปิดแจ้งเตือนคนนี้อีกครั้ง" : "ปิดแจ้งเตือนคนนี้";
-    showToast(nowMuted ? "ปิดแจ้งเตือนจากคนนี้แล้ว" : "เปิดแจ้งเตือนจากคนนี้แล้ว");
+    btn.title = nowMuted ? t("unmute_title") : t("mute_this_person");
+    showToast(nowMuted ? t("mute_toast_on") : t("mute_toast_off"));
   });
   document.getElementById("blockChatBtn").addEventListener("click", blockCurrentChatUser);
   document.getElementById("blockedListBtn").addEventListener("click", function(){

@@ -119,6 +119,14 @@ a{color:inherit;}
 :root[data-theme="dark"] .theme-toggle .icon-moon{display:none;}
 :root[data-theme="light"] .theme-toggle .icon-sun{display:none;}
 :root[data-theme="light"] .theme-toggle .icon-moon{display:block;}
+.icon-btn.lang-toggle{
+  border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);
+  box-shadow:var(--shadow-card);
+  width:32px;height:32px;
+  font-family:var(--font-display);font-weight:700;font-size:11px;letter-spacing:.02em;
+  color:var(--text-muted);
+}
+.icon-btn.lang-toggle:hover{border-color:var(--accent);color:var(--accent);}
 .icon-btn.notif-toggle{
   border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);
   box-shadow:var(--shadow-card);
