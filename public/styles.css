@@ -423,8 +423,8 @@ textarea.text-input{resize:vertical;min-height:70px;}
 .breakdown-detail.match-full b{color:var(--success);}
 
 .good-to-know{
-  font-size:13px;color:var(--text-muted);font-style:italic;
-  padding:10px 12px;border-radius:var(--radius-sm);background:var(--surface-sunken);
+  font-size:13px;color:var(--accent);font-style:italic;font-weight:600;
+  padding:10px 12px;border-radius:var(--radius-sm);background:var(--accent-soft);
   border-left:3px solid var(--accent);
 }
 
@@ -510,8 +510,8 @@ textarea.text-input{resize:vertical;min-height:70px;}
 }
 @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.5;}30%{transform:translateY(-3px);opacity:1;}}
 .chat-good-to-know{
-  margin:0 16px 12px;padding:9px 12px;border-radius:var(--radius-sm);background:var(--surface-sunken);
-  font-size:12px;color:var(--text-muted);font-style:italic;border-left:3px solid var(--accent);
+  margin:0 16px 12px;padding:9px 12px;border-radius:var(--radius-sm);background:var(--accent-soft);
+  font-size:12px;color:var(--accent);font-style:italic;font-weight:600;border-left:3px solid var(--accent);
 }
 .chat-input-row{display:flex;gap:8px;padding:14px 16px;border-top:1px solid var(--border);}
 .chat-input-row input{
