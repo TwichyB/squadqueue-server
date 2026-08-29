@@ -263,7 +263,8 @@ router.get("/me", requireAuth, async (req, res) => {
           genres: row.genres,
           goodToKnow: row.good_to_know,
           reputation: row.reputation,
-          minMatchPct: row.min_match_pct
+          minMatchPct: row.min_match_pct,
+          interestedIn: row.interested_in
         }
       : null;
 

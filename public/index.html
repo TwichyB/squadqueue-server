@@ -137,11 +137,23 @@
   </div>
 </div>
 
+<button type="button" class="conversations-tab-btn" id="conversationsTabBtn" hidden>💬 แชท</button>
+<aside class="conversations-panel" id="conversationsPanel" hidden>
+  <div class="conversations-header">
+    <span>แชทล่าสุด</span>
+    <button class="icon-btn" id="closeConversationsBtn" aria-label="ปิด">✕</button>
+  </div>
+  <div class="conversations-list" id="conversationsList"></div>
+</aside>
+
 <aside class="chat-panel" id="chatPanel" hidden>
   <div class="chat-header">
     <div class="avatar" id="chatAvatar" style="width:38px;height:38px;font-size:14px;"></div>
     <div class="id">
-      <div class="name" id="chatName"></div>
+      <div class="name-row">
+        <div class="name" id="chatName"></div>
+        <button class="icon-btn nickname-edit-btn" id="nicknameEditBtn" type="button" aria-label="ตั้งชื่อเล่น (เห็นเฉพาะคุณ)" title="ตั้งชื่อเล่น (เห็นเฉพาะคุณ)">✏️</button>
+      </div>
       <div class="status" id="chatStatus"></div>
       <div id="chatReputation"></div>
     </div>

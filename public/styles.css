@@ -470,8 +470,16 @@ textarea.text-input{resize:vertical;min-height:70px;}
   display:flex;align-items:center;gap:12px;padding:16px 16px 14px;border-bottom:1px solid var(--border);
 }
 .chat-header .id{flex:1;min-width:0;}
-.chat-header .id .name{font-weight:700;font-size:15px;}
+.chat-header .id .name-row{display:flex;align-items:center;gap:4px;}
+.chat-header .id .name{font-weight:700;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .chat-header .id .status{font-size:12px;color:var(--text-faint);}
+.nickname-edit-btn{width:24px;height:24px;font-size:12px;flex-shrink:0;opacity:.55;}
+.nickname-edit-btn:hover{opacity:1;}
+.nickname-input{
+  font-weight:700;font-size:15px;font-family:inherit;color:var(--text);
+  background:var(--surface-sunken);border:1px solid var(--accent);border-radius:6px;
+  padding:2px 6px;width:100%;min-width:0;
+}
 .chat-actions{display:flex;align-items:center;gap:2px;flex-shrink:0;}
 .icon-btn{
   background:transparent;border:none;color:var(--text-muted);cursor:pointer;
@@ -546,6 +554,38 @@ textarea.text-input{resize:vertical;min-height:70px;}
 }
 .emoji-option:hover{background:var(--surface-sunken);}
 
+/* ---------- conversations tab (คนที่เคยคุยด้วย) ---------- */
+.conversations-tab-btn{
+  position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:55;
+  writing-mode:vertical-rl;text-orientation:mixed;
+  padding:14px 8px;border-radius:0 var(--radius-md) var(--radius-md) 0;
+  background:var(--accent);color:var(--accent-contrast);border:none;
+  font-weight:600;font-size:13px;cursor:pointer;box-shadow:var(--shadow-pop);
+}
+.conversations-tab-btn:hover{filter:brightness(1.05);}
+.conversations-panel{
+  position:fixed;top:0;left:0;bottom:0;width:min(340px,100vw);z-index:60;
+  background:var(--surface);border-right:1px solid var(--border);box-shadow:var(--shadow-pop);
+  display:flex;flex-direction:column;
+}
+.conversations-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 16px 14px;border-bottom:1px solid var(--border);
+  font-weight:700;font-size:15px;
+}
+.conversations-list{flex:1;overflow-y:auto;padding:8px;}
+.conversation-item{
+  display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:var(--radius-sm);
+  cursor:pointer;
+}
+.conversation-item:hover{background:var(--surface-sunken);}
+.conversation-item .conv-text{flex:1;min-width:0;}
+.conversation-item .conv-name{font-weight:600;font-size:13.5px;}
+.conversation-item .conv-last{
+  font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.conversations-empty{color:var(--text-muted);font-size:13px;text-align:center;padding:24px 12px;}
+
 /* ---------- mismatch visibility toggle ---------- */
 .mismatch-toggle.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
 
@@ -561,4 +601,5 @@ textarea.text-input{resize:vertical;min-height:70px;}
 @media (max-width:640px){
   .wrap{padding:20px 14px 70px;}
   .chat-panel{width:100vw;}
+  .conversations-panel{width:100vw;}
 }

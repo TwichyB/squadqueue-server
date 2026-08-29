@@ -9,7 +9,7 @@ router.get("/", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id, p.name, p.gender, p.goal, p.games, p.days, p.times, p.styles, p.genres, p.good_to_know,
-              p.reputation, rv.value AS my_vote,
+              p.reputation, p.interested_in, rv.value AS my_vote,
               EXISTS (
                 SELECT 1 FROM messages m
                 WHERE (m.sender_id = $1 AND m.receiver_id = p.user_id)
@@ -41,6 +41,7 @@ router.get("/", requireAuth, async (req, res) => {
       genres: row.genres,
       goodToKnow: row.good_to_know,
       reputation: row.reputation,
+      interestedIn: row.interested_in,
       myVote: row.my_vote || 0,
       hasChatted: row.has_chatted,
       online: onlineUserIds.has(row.id)

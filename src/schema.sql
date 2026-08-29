@@ -53,6 +53,11 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS genres JSONB NOT NULL DEFAULT '[]'
 -- visible and messageable, just flagged with a warning symbol in the UI.
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS min_match_pct INTEGER NOT NULL DEFAULT 0;
 
+-- Which gender(s) someone is interested in — only meaningful (and only shown
+-- in the UI) when "goal" includes "open" (เป็นมากกว่าเพื่อนก็ได้ถ้าถูกใจ).
+-- Empty array = no preference stated.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS interested_in JSONB NOT NULL DEFAULT '[]'::jsonb;
+
 CREATE TABLE IF NOT EXISTS messages (
   id SERIAL PRIMARY KEY,
   sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

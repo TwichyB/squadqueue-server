@@ -17,8 +17,11 @@
     {id:"evening",label:"เย็น"},{id:"night",label:"ดึก"}
   ];
 
-  var GENDERS = [{id:"male",label:"ชาย"},{id:"female",label:"หญิง"},{id:"unspecified",label:"ขอไม่เปิดเผย"}];
-  var GENDER_LABELS = {male:"ชาย", female:"หญิง", unspecified:"ขอไม่เปิดเผย"};
+  var GENDERS = [{id:"male",label:"ชาย"},{id:"female",label:"หญิง"},{id:"non_binary",label:"Non-binary"},{id:"unspecified",label:"ขอไม่เปิดเผย"}];
+  var GENDER_LABELS = {male:"ชาย", female:"หญิง", non_binary:"Non-binary", unspecified:"ขอไม่เปิดเผย"};
+  // ตัวเลือก "สนใจเพศไหน" — โชว์เฉพาะตอนเลือกเป้าหมาย "เป็นมากกว่าเพื่อนก็ได้ถ้าถูกใจ"
+  var INTERESTED_IN_OPTIONS = [{id:"male",label:"ชาย"},{id:"female",label:"หญิง"}];
+  var INTERESTED_IN_LABELS = {male:"ชาย", female:"หญิง"};
 
   var GOALS = [{id:"friends",label:"หาเพื่อนเล่นเกมอย่างเดียว"},{id:"open",label:"เป็นมากกว่าเพื่อนก็ได้ถ้าถูกใจ"}];
   var GOAL_LABELS = {friends:"หาเพื่อนเล่นเกมอย่างเดียว", open:"เป็นมากกว่าเพื่อนก็ได้ถ้าถูกใจ"};
@@ -89,6 +92,30 @@
   function dice(a,b){
     if(a.length===0 && b.length===0) return 0;
     return (2*intersect(a,b).length)/(a.length+b.length);
+  }
+
+  // ชื่อเกมพิมพ์เองได้อิสระ (ปุ่ม "เพิ่มเกมอื่น...") คนละคนอาจพิมพ์ตัวพิมพ์เล็ก/ใหญ่หรือเว้นวรรค
+  // ไม่เหมือนกัน ทั้งที่หมายถึงเกมเดียวกัน — intersect/dice ปกติเทียบสตริงตรงตัวเป๊ะๆ
+  // เลยพลาดจับคู่ ฟังก์ชันชุดนี้เทียบแบบ normalize (ตัดช่องว่างหัวท้าย/ยุบช่องว่างซ้ำ/ไม่สนตัวพิมพ์เล็กใหญ่)
+  // แต่ยังคงชื่อที่โชว์ผลเป็นตัวสะกดจากรายการเกมมาตรฐานถ้ามี ไม่งั้นใช้ตัวสะกดของฝั่ง a
+  function normGame(s){ return String(s||"").trim().toLowerCase().replace(/\s+/g," "); }
+  function canonicalGameName(name){
+    var match = GAMES.filter(function(g){ return normGame(g) === normGame(name); })[0];
+    return match || name;
+  }
+  function intersectGames(a,b){
+    var bNorm = b.map(normGame);
+    return a.filter(function(x){ return bNorm.indexOf(normGame(x))>-1; }).map(canonicalGameName);
+  }
+  function symDiffGames(a,b){
+    var aNorm = a.map(normGame), bNorm = b.map(normGame);
+    var onlyA = a.filter(function(x){ return bNorm.indexOf(normGame(x))===-1; });
+    var onlyB = b.filter(function(x){ return aNorm.indexOf(normGame(x))===-1; });
+    return onlyA.concat(onlyB);
+  }
+  function diceGames(a,b){
+    if(a.length===0 && b.length===0) return 0;
+    return (2*intersectGames(a,b).length)/(a.length+b.length);
   }
   var DAY_LABELS = DAYS.reduce(function(m,d){ m[d.id]=d.label; return m; }, {});
   var TIME_FULL_LABELS = TIMES.reduce(function(m,t){ m[t.id]=t.label; return m; }, {});
@@ -232,6 +259,30 @@
     return pinned.has(candId);
   }
 
+  /* ---------------- ตั้งชื่อเล่นให้เพื่อนที่คุยด้วย (client-side only, เห็นเฉพาะเรา) ---------------- */
+  function nicknameKey(){ return "squadqueue_nicknames_" + (state.user ? state.user.id : "anon"); }
+  function loadNicknames(){
+    try{ var raw = localStorage.getItem(nicknameKey()); return raw ? JSON.parse(raw) : {}; }
+    catch(e){ return {}; }
+  }
+  function saveNicknames(map){
+    try{ localStorage.setItem(nicknameKey(), JSON.stringify(map)); }catch(e){}
+  }
+  function getNickname(id){ return loadNicknames()[id] || ""; }
+  function setNickname(id, name){
+    var map = loadNicknames();
+    name = String(name||"").trim().slice(0,24);
+    if(name) map[id] = name; else delete map[id];
+    saveNicknames(map);
+  }
+  // ชื่อที่ควรโชว์ให้เราเห็น: ชื่อเล่นที่เราตั้งเอง (ถ้ามี) ไม่งั้นใช้ชื่อจริงที่เขาตั้งในโปรไฟล์
+  // — เฉพาะเบราว์เซอร์ของเราเท่านั้นที่เห็นชื่อเล่นนี้ อีกฝ่ายไม่รู้เรื่องด้วย
+  function displayName(p){
+    if(!p) return "";
+    var nick = getNickname(p.id);
+    return nick || p.name;
+  }
+
   /* ---------------- show/hide mismatch details (per-viewer preference) ---------------- */
   function showMismatchKey(){ return "squadqueue_show_mismatch_" + (state.user ? state.user.id : "anon"); }
   function isShowMismatch(){
@@ -281,10 +332,10 @@
     fresh.sort(function(a,b){ return b.score.total - a.score.total; });
     if(fresh.length === 1){
       var f = fresh[0];
-      showNotification("เจอคู่ใหม่ที่เข้ากับคุณ! 🎮", f.cand.name + " ตรงกับคุณ " + f.score.total + "%", function(){ openChat(f.cand); });
+      showNotification("เจอคู่ใหม่ที่เข้ากับคุณ! 🎮", displayName(f.cand) + " ตรงกับคุณ " + f.score.total + "%", function(){ openChat(f.cand); });
     } else {
       var top = fresh[0];
-      showNotification("เจอคู่ใหม่ " + fresh.length + " คน! 🎮", "คะแนนสูงสุด: " + top.cand.name + " (" + top.score.total + "%)", function(){
+      showNotification("เจอคู่ใหม่ " + fresh.length + " คน! 🎮", "คะแนนสูงสุด: " + displayName(top.cand) + " (" + top.score.total + "%)", function(){
         var lobby = document.getElementById("viewLobby");
         if(!lobby.hidden) lobby.scrollIntoView({behavior:"smooth"});
       });
@@ -299,6 +350,7 @@
         checkNewMatches();
         if(!document.getElementById("viewLobby").hidden) renderGrid();
       }).catch(function(){});
+      loadConversations();
     }, 45000);
   }
   function stopCandidatePolling(){
@@ -335,7 +387,7 @@
   function matchScore(user, cand){
     var candGenres = cand.genres || [];
     var userGenres = user.genres || [];
-    var gameScore = dice(user.games, cand.games);
+    var gameScore = diceGames(user.games, cand.games);
     var timeScore = user.times.length ? intersect(user.times, cand.times).length/user.times.length : 0;
     var dayScore = user.days.length ? intersect(user.days, cand.days).length/user.days.length : 0;
     var styleScore = dice(user.styles, cand.styles);
@@ -352,7 +404,7 @@
       },
       mismatch: {
         // เกม/สไตล์/แนวเกม ใช้คะแนนแบบ dice (สนใจทั้ง 2 ฝั่ง) จึงโชว์ส่วนต่างแบบสมมาตร
-        games: symDiff(user.games, cand.games),
+        games: symDiffGames(user.games, cand.games),
         styles: symDiff(user.styles, cand.styles),
         genres: symDiff(userGenres, candGenres),
         // วัน/เวลา ใช้คะแนนจาก "ความครอบคลุมความต้องการของคุณ" จึงโชว์เฉพาะสิ่งที่คุณอยากได้แต่เขาไม่มี
@@ -361,7 +413,7 @@
       },
       // จุดที่ตรงกันจริง (สีเขียว) — โชว์เสมอไม่ว่าจะเปิด/ปิดปุ่มซ่อนจุดที่ไม่ตรงกัน
       matched: {
-        games: intersect(user.games, cand.games),
+        games: intersectGames(user.games, cand.games),
         styles: intersect(user.styles, cand.styles),
         genres: intersect(userGenres, candGenres),
         days: intersect(user.days, cand.days).map(function(id){ return DAY_LABELS[id] || id; }),
@@ -375,6 +427,7 @@
     user: null,
     profile: null,
     candidates: [],
+    conversations: [],
     onlineIds: new Set(),
     socket: null,
     activeChatId: null
@@ -393,7 +446,8 @@
       styles: existing ? existing.styles.slice() : [],
       genres: existing && existing.genres ? existing.genres.slice() : [],
       goodToKnow: existing ? existing.goodToKnow : "",
-      minMatchPct: existing && typeof existing.minMatchPct === "number" ? existing.minMatchPct : 0
+      minMatchPct: existing && typeof existing.minMatchPct === "number" ? existing.minMatchPct : 0,
+      interestedIn: existing && existing.interestedIn ? existing.interestedIn.slice() : []
     };
 
     var form = el("form", {});
@@ -434,6 +488,7 @@
           var i = data.goal.indexOf(g.id);
           if(i>-1) data.goal.splice(i,1); else data.goal.push(g.id);
           renderGoal();
+          updateInterestedInVisibility();
         });
         goalRow.appendChild(pill);
       });
@@ -441,6 +496,31 @@
     renderGoal();
     goalField.appendChild(goalRow);
     form.appendChild(goalField);
+
+    // สนใจเพศไหน — โชว์เฉพาะตอนเลือก "เป็นมากกว่าเพื่อนก็ได้ถ้าถูกใจ" ด้านบน
+    var interestedInField = el("div",{class:"field"});
+    interestedInField.appendChild(el("label",{class:"field-label"},["สนใจเพศไหน (เลือกได้มากกว่า 1)"]));
+    var interestedInRow = el("div",{class:"select-row"});
+    function renderInterestedIn(){
+      interestedInRow.innerHTML = "";
+      INTERESTED_IN_OPTIONS.forEach(function(g){
+        var active = data.interestedIn.indexOf(g.id) > -1;
+        var pill = el("div",{class:"select-pill"+(active?" active":"")},[g.label]);
+        pill.addEventListener("click", function(){
+          var i = data.interestedIn.indexOf(g.id);
+          if(i>-1) data.interestedIn.splice(i,1); else data.interestedIn.push(g.id);
+          renderInterestedIn();
+        });
+        interestedInRow.appendChild(pill);
+      });
+    }
+    function updateInterestedInVisibility(){
+      interestedInField.hidden = data.goal.indexOf("open") === -1;
+    }
+    renderInterestedIn();
+    interestedInField.appendChild(interestedInRow);
+    updateInterestedInVisibility();
+    form.appendChild(interestedInField);
 
     // games
     var gamesField = el("div",{class:"field"});
@@ -541,7 +621,7 @@
 
     // genres
     var genresField = el("div",{class:"field"});
-    genresField.appendChild(el("label",{class:"field-label"},["แนวเกมที่ชอบ (เลือกได้สูงสุด 4)"]));
+    genresField.appendChild(el("label",{class:"field-label"},["แนวเกมที่ชอบ (เลือกได้สูงสุด 8)"]));
     var genresRow = el("div",{class:"chip-row"});
     function renderGenres(){
       genresRow.innerHTML = "";
@@ -551,7 +631,7 @@
         chip.addEventListener("click", function(){
           var i = data.genres.indexOf(g);
           if(i>-1) data.genres.splice(i,1);
-          else if(data.genres.length<4) data.genres.push(g);
+          else if(data.genres.length<8) data.genres.push(g);
           else showToast("เลือกได้สูงสุด 4 แนว");
           renderGenres();
         });
@@ -676,7 +756,7 @@
     var top = el("div",{class:"p-card-top"});
     top.appendChild(makeAvatar(cand.name));
     var idBox = el("div",{class:"p-card-id"});
-    var nameRow = el("div",{class:"p-card-name"},[cand.name]);
+    var nameRow = el("div",{class:"p-card-name"},[displayName(cand)]);
     if(online){
       var dot = el("span",{class:"online-dot live"});
       nameRow.insertBefore(dot, nameRow.firstChild);
@@ -724,6 +804,10 @@
 
     var metaRow = el("div",{class:"p-card-games"});
     (cand.goal||[]).forEach(function(gid){ metaRow.appendChild(el("span",{class:"tag goal-tag"},[GOAL_LABELS[gid]||gid])); });
+    if((cand.goal||[]).indexOf("open")>-1 && cand.interestedIn && cand.interestedIn.length){
+      var interestedLabel = cand.interestedIn.map(function(g){ return INTERESTED_IN_LABELS[g]||g; }).join("/");
+      metaRow.appendChild(el("span",{class:"tag goal-tag"},["สนใจ: "+interestedLabel]));
+    }
     card.appendChild(metaRow);
 
     var breakdown = el("div",{class:"breakdown"});
@@ -778,8 +862,17 @@
     var currentFilterVal = gameFilter.value || "all";
     gameFilter.innerHTML = "";
     gameFilter.appendChild(el("option",{value:"all"},["ทุกเกม"]));
-    GAMES.concat(state.candidates.reduce(function(acc,c){ c.games.forEach(function(g){ if(GAMES.indexOf(g)===-1 && acc.indexOf(g)===-1) acc.push(g); }); return acc; },[]))
-      .forEach(function(g){ gameFilter.appendChild(el("option",{value:g},[g])); });
+    // รวมเกมที่พิมพ์เองมาแบบไม่ซ้ำกับรายการมาตรฐาน โดยเทียบแบบไม่สนตัวพิมพ์เล็กใหญ่/ช่องว่าง
+    // กันไม่ให้ dropdown มีตัวเลือกซ้ำ เช่น "Dota 2" กับ "dota 2" แยกกันคนละอัน
+    var seenGameKeys = GAMES.map(normGame);
+    var extraGames = [];
+    state.candidates.forEach(function(c){
+      c.games.forEach(function(g){
+        var key = normGame(g);
+        if(seenGameKeys.indexOf(key) === -1){ seenGameKeys.push(key); extraGames.push(g); }
+      });
+    });
+    GAMES.concat(extraGames).forEach(function(g){ gameFilter.appendChild(el("option",{value:g},[g])); });
     gameFilter.value = currentFilterVal;
 
     var minMatchFilter = document.getElementById("minMatchFilter");
@@ -829,7 +922,7 @@
       var c = item.cand;
       var matchesSearch = !search || c.name.toLowerCase().indexOf(search)>-1 ||
         c.games.some(function(g){ return g.toLowerCase().indexOf(search)>-1; });
-      var matchesGame = gameFilterVal==="all" || c.games.indexOf(gameFilterVal)>-1;
+      var matchesGame = gameFilterVal==="all" || c.games.some(function(g){ return normGame(g)===normGame(gameFilterVal); });
       return matchesSearch && matchesGame;
     });
 
@@ -877,10 +970,11 @@
 
   function openChat(cand){
     state.activeChatId = cand.id;
+    state.activeChatCand = cand;
     var av = document.getElementById("chatAvatar");
     av.style.background = hashColor(cand.name);
     av.textContent = initials(cand.name);
-    document.getElementById("chatName").textContent = cand.name;
+    document.getElementById("chatName").textContent = displayName(cand);
     document.getElementById("chatStatus").textContent = (state.onlineIds.has(cand.id) ? "ออนไลน์ตอนนี้" : "ออฟไลน์") + " · " + GENDER_LABELS[cand.gender];
     var chatGtk = document.getElementById("chatGoodToKnow");
     var hasGtk = cand.goodToKnow && cand.goodToKnow.trim();
@@ -916,6 +1010,37 @@
     document.getElementById("chatPanel").hidden = true;
     document.getElementById("scrim").hidden = true;
     state.activeChatId = null;
+    state.activeChatCand = null;
+  }
+
+  /* ---------------- แก้ไขชื่อเล่นแบบ inline ในหัวข้อแชท ---------------- */
+  function startEditNickname(){
+    var cand = state.activeChatCand;
+    if(!cand) return;
+    var nameEl = document.getElementById("chatName");
+    if(nameEl.tagName === "INPUT") return; // กำลังแก้อยู่แล้ว ไม่ต้องเริ่มซ้ำ
+
+    var input = el("input",{id:"chatName", class:"nickname-input", type:"text", maxlength:"24", placeholder:cand.name, value:getNickname(cand.id)});
+    nameEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    var done = false;
+    function finish(save){
+      if(done) return; // กัน blur ยิงซ้ำหลังจาก Enter/Escape ทำงานไปแล้ว (input ถูกถอดออกจาก DOM ก็ทำให้ blur ได้เหมือนกัน)
+      done = true;
+      if(save) setNickname(cand.id, input.value);
+      var restored = el("div",{class:"name", id:"chatName"},[displayName(cand)]);
+      input.replaceWith(restored);
+      // เปลี่ยนชื่อที่โชว์ในที่อื่นๆ ให้ตรงกันทันที ไม่ต้องรอปิดเปิดใหม่
+      if(!document.getElementById("viewLobby").hidden) renderGrid();
+      if(!document.getElementById("conversationsPanel").hidden) renderConversationsList();
+    }
+    input.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); finish(true); }
+      else if(e.key === "Escape"){ e.preventDefault(); finish(false); }
+    });
+    input.addEventListener("blur", function(){ finish(true); });
   }
 
   function formatMsgTime(ts){
@@ -974,7 +1099,7 @@
       closeChat();
       state.candidates = state.candidates.filter(function(c){ return c.id !== candId; });
       if(!document.getElementById("viewLobby").hidden) renderGrid();
-      showToast((cand ? cand.name : "ผู้ใช้นี้") + " ถูกบล็อกแล้ว");
+      showToast((cand ? displayName(cand) : "ผู้ใช้นี้") + " ถูกบล็อกแล้ว");
     }).catch(function(err){
       showToast(err.message || "บล็อกไม่สำเร็จ ลองใหม่อีกครั้ง");
     }).finally(function(){
@@ -998,12 +1123,12 @@
       blocked.forEach(function(b){
         var row = el("div",{class:"blocked-item"});
         row.appendChild(makeAvatar(b.name, 34));
-        row.appendChild(el("div",{class:"name"},[b.name]));
+        row.appendChild(el("div",{class:"name"},[displayName(b)]));
         var unblockBtn = el("button",{class:"btn btn-ghost btn-sm", type:"button"},["เลิกบล็อก"]);
         unblockBtn.addEventListener("click", function(){
           unblockBtn.disabled = true;
           apiFetch("/users/" + b.id + "/unblock", {method:"POST"}).then(function(){
-            showToast(b.name + " ถูกเลิกบล็อกแล้ว");
+            showToast(displayName(b) + " ถูกเลิกบล็อกแล้ว");
             renderBlockedList();
             loadCandidates().then(function(){
               if(!document.getElementById("viewLobby").hidden) renderGrid();
@@ -1049,10 +1174,12 @@
       }
       if(m.from === "them" && (!isOpenChat || document.hidden) && !isMuted(otherId)){
         var cand = findCandidate(otherId);
-        showNotification("ข้อความใหม่จาก " + (cand ? cand.name : "เพื่อนใหม่"), m.text, function(){
+        showNotification("ข้อความใหม่จาก " + (cand ? displayName(cand) : "เพื่อนใหม่"), m.text, function(){
           if(cand) openChat(cand);
         });
       }
+      // ข้อความใหม่ไม่ว่าจะส่งเองหรือได้รับ ก็อัปเดตแท็บ "แชทล่าสุด" ให้ทันสมัยด้วย
+      loadConversations();
     });
   }
 
@@ -1070,6 +1197,63 @@
       state.candidates = data.candidates || [];
       state.onlineIds = new Set(state.candidates.filter(function(c){ return c.online; }).map(function(c){ return c.id; }));
     });
+  }
+
+  /* ---------------- แท็บ "แชทล่าสุด" (คนที่เคยคุยด้วยแล้ว) ---------------- */
+  function loadConversations(){
+    return apiFetch("/chat/conversations").then(function(data){
+      state.conversations = data.conversations || [];
+      renderConversationsList();
+      var tabBtn = document.getElementById("conversationsTabBtn");
+      tabBtn.hidden = state.conversations.length === 0;
+    }).catch(function(){});
+  }
+
+  function renderConversationsList(){
+    var list = document.getElementById("conversationsList");
+    list.innerHTML = "";
+    var conversations = state.conversations || [];
+    if(conversations.length === 0){
+      list.appendChild(el("div",{class:"conversations-empty"},["ยังไม่มีแชทกับใครเลย"]));
+      return;
+    }
+    conversations.forEach(function(conv){
+      var item = el("div",{class:"conversation-item"});
+      item.appendChild(makeAvatar(conv.name, 36));
+      var textCol = el("div",{class:"conv-text"});
+      textCol.appendChild(el("div",{class:"conv-name"},[displayName(conv)]));
+      var preview = (conv.lastMessageFromMe ? "คุณ: " : "") + (conv.lastMessage || "");
+      textCol.appendChild(el("div",{class:"conv-last"},[preview]));
+      item.appendChild(textCol);
+      item.addEventListener("click", function(){
+        // ปิดแท็บนี้ก่อนแล้วค่อยเปิดแชท ไม่งั้นจะไปเผลอซ่อน scrim ทับสถานะที่ openChat เพิ่งเปิดไว้
+        closeConversationsPanel();
+        openChatById(conv.id, conv.name);
+      });
+      list.appendChild(item);
+    });
+  }
+
+  function openChatById(id, name){
+    var cand = findCandidate(id);
+    if(!cand){
+      // คนคนนี้อาจไม่อยู่ใน state.candidates แล้ว (เช่นถูกกรองออกไปด้วยเหตุผลอื่น) —
+      // สร้างข้อมูลสำรองขั้นต่ำไว้ให้เปิดแชทได้ ไม่ให้ทั้งหน้าค้าง
+      cand = {id:id, name:name||"ผู้ใช้", gender:"unspecified", goodToKnow:"", reputation:100, myVote:0,
+        games:[], styles:[], genres:[], days:[], times:[], goal:[]};
+    }
+    openChat(cand);
+  }
+
+  function openConversationsPanel(){
+    renderConversationsList(); // โชว์ของที่มีอยู่ก่อน กันจอว่างวูบระหว่างรอโหลด
+    document.getElementById("conversationsPanel").hidden = false;
+    document.getElementById("scrim").hidden = false;
+    loadConversations(); // แล้วค่อยรีเฟรชของจริงจากเซิร์ฟเวอร์
+  }
+  function closeConversationsPanel(){
+    document.getElementById("conversationsPanel").hidden = true;
+    document.getElementById("scrim").hidden = true;
   }
 
   /* ---------------- auth ---------------- */
@@ -1327,6 +1511,7 @@
     }).catch(function(err){
       showToast(err.message || "โหลดรายชื่อไม่สำเร็จ");
     });
+    loadConversations();
   }
 
   function afterLogin(){
@@ -1361,6 +1546,9 @@
       state.user = null;
       state.profile = null;
       state.candidates = [];
+      state.conversations = [];
+      document.getElementById("conversationsTabBtn").hidden = true;
+      closeConversationsPanel();
       showAuthView();
     });
   }
@@ -1468,6 +1656,7 @@
     document.getElementById("scrim").hidden = true;
   });
   document.getElementById("closeChatBtn").addEventListener("click", closeChat);
+  document.getElementById("nicknameEditBtn").addEventListener("click", startEditNickname);
   document.getElementById("muteChatBtn").addEventListener("click", function(){
     if(!state.activeChatId) return;
     var nowMuted = toggleMute(state.activeChatId);
@@ -1496,7 +1685,10 @@
       document.getElementById("blockedModal").hidden = true;
       document.getElementById("scrim").hidden = true;
     }
+    if(!document.getElementById("conversationsPanel").hidden) closeConversationsPanel();
   });
+  document.getElementById("conversationsTabBtn").addEventListener("click", openConversationsPanel);
+  document.getElementById("closeConversationsBtn").addEventListener("click", closeConversationsPanel);
   document.getElementById("chatForm").addEventListener("submit", function(e){
     e.preventDefault();
     var input = document.getElementById("chatInput");

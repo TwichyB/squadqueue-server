@@ -3,11 +3,16 @@ const pool = require("../db");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
-const GENDERS = ["male", "female", "unspecified"];
+const GENDERS = ["male", "female", "non_binary", "unspecified"];
+const INTERESTED_IN_OPTIONS = ["male", "female"];
 
 function sanitizeArray(value, maxItems) {
   if (!Array.isArray(value)) return [];
-  return value.filter((v) => typeof v === "string" && v.length > 0).slice(0, maxItems || 40);
+  return value
+    .filter((v) => typeof v === "string")
+    .map((v) => v.trim())
+    .filter((v) => v.length > 0)
+    .slice(0, maxItems || 40);
 }
 
 router.put("/", requireAuth, async (req, res) => {
@@ -19,7 +24,11 @@ router.put("/", requireAuth, async (req, res) => {
   const days = sanitizeArray(body.days, 7);
   const times = sanitizeArray(body.times, 4);
   const styles = sanitizeArray(body.styles, 4);
-  const genres = sanitizeArray(body.genres, 4);
+  const genres = sanitizeArray(body.genres, 8);
+  // สนใจเพศไหน มีความหมายเฉพาะตอน goal มี "open" เท่านั้น ไม่งั้นบันทึกเป็นค่าว่างเสมอ
+  const interestedIn = goal.indexOf("open") > -1
+    ? sanitizeArray(body.interestedIn, 2).filter((v) => INTERESTED_IN_OPTIONS.indexOf(v) > -1)
+    : [];
   const goodToKnow = String(body.goodToKnow || "").slice(0, 140);
   var minMatchPct = parseInt(body.minMatchPct, 10);
   if (!Number.isInteger(minMatchPct) || minMatchPct < 0) minMatchPct = 0;
@@ -31,11 +40,11 @@ router.put("/", requireAuth, async (req, res) => {
 
   try {
     await pool.query(
-      `INSERT INTO profiles (user_id, name, gender, goal, games, days, times, styles, genres, good_to_know, min_match_pct, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
+      `INSERT INTO profiles (user_id, name, gender, goal, games, days, times, styles, genres, good_to_know, min_match_pct, interested_in, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, now())
        ON CONFLICT (user_id) DO UPDATE SET
          name = $2, gender = $3, goal = $4, games = $5, days = $6, times = $7, styles = $8,
-         genres = $9, good_to_know = $10, min_match_pct = $11, updated_at = now()`,
+         genres = $9, good_to_know = $10, min_match_pct = $11, interested_in = $12, updated_at = now()`,
       [
         req.userId,
         name,
@@ -47,7 +56,8 @@ router.put("/", requireAuth, async (req, res) => {
         JSON.stringify(styles),
         JSON.stringify(genres),
         goodToKnow,
-        minMatchPct
+        minMatchPct,
+        JSON.stringify(interestedIn)
       ]
     );
     res.json({ ok: true });
