@@ -27,6 +27,12 @@
     "มือใหม่โอเค ใจดี","สายฝึกหนัก อยากพัฒนา","ชอบวางแผน","สายฮา มีมทุกเกม",
     "ใช้วอยซ์แชทได้","พิมพ์แชทอย่างเดียว"];
 
+  var GENRES = ["Survival","Cozy","Farming","Sandbox/Building","RPG","FPS/Shooter","MOBA",
+    "Battle Royale","Simulation","Horror","Racing/Sports","Puzzle/Casual","Card/Strategy","Gacha/สะสม"];
+
+  var EMOJIS = ["😀","😂","😅","🥹","😍","😘","😎","🤔","🙄","😭","😡","🥳","😱","😴","🤝","👀",
+    "👍","👎","🙏","🔥","💯","❤️","💀","✨","🎮","🎉","☕","🌙","👋","😏"];
+
   var AVATAR_COLORS = ["#d85f22","#1f9d63","#3a6bd8","#a13fc9","#c9433f","#2aa3a3","#c98a1f","#6d5fd8"];
 
   function hashColor(str){
@@ -209,6 +215,26 @@
     return muted.has(candId);
   }
 
+  /* ---------------- show/hide mismatch details (per-viewer preference) ---------------- */
+  function showMismatchKey(){ return "squadqueue_show_mismatch_" + (state.user ? state.user.id : "anon"); }
+  function isShowMismatch(){
+    try{
+      var raw = localStorage.getItem(showMismatchKey());
+      if(raw === null) return true;
+      return raw === "1";
+    }catch(e){ return true; }
+  }
+  function setShowMismatch(on){
+    try{ localStorage.setItem(showMismatchKey(), on ? "1" : "0"); }catch(e){}
+  }
+  function updateMismatchToggleBtn(){
+    var btn = document.getElementById("mismatchToggleBtn");
+    if(!btn) return;
+    var on = isShowMismatch();
+    btn.classList.toggle("active", on);
+    btn.textContent = on ? "🙈 ซ่อนจุดที่ไม่ตรงกัน" : "👁 แสดงจุดที่ไม่ตรงกัน";
+  }
+
   function seenMatchesKey(){ return "squadqueue_seen_matches_" + (state.user ? state.user.id : "anon"); }
   function loadSeenMatches(){
     try{ var raw = localStorage.getItem(seenMatchesKey()); return raw ? new Set(JSON.parse(raw)) : new Set(); }
@@ -290,23 +316,28 @@
 
   /* ---------------- matching ---------------- */
   function matchScore(user, cand){
+    var candGenres = cand.genres || [];
+    var userGenres = user.genres || [];
     var gameScore = dice(user.games, cand.games);
     var timeScore = user.times.length ? intersect(user.times, cand.times).length/user.times.length : 0;
     var dayScore = user.days.length ? intersect(user.days, cand.days).length/user.days.length : 0;
     var styleScore = dice(user.styles, cand.styles);
-    var total = gameScore*0.45 + timeScore*0.2 + dayScore*0.15 + styleScore*0.2;
+    var genreScore = dice(userGenres, candGenres);
+    var total = gameScore*0.35 + timeScore*0.2 + dayScore*0.15 + styleScore*0.15 + genreScore*0.15;
     return {
       total: Math.round(total*100),
       breakdown: {
         games: Math.round(gameScore*100),
         day: Math.round(dayScore*100),
         time: Math.round(timeScore*100),
-        style: Math.round(styleScore*100)
+        style: Math.round(styleScore*100),
+        genre: Math.round(genreScore*100)
       },
       mismatch: {
-        // เกม/สไตล์ ใช้คะแนนแบบ dice (สนใจทั้ง 2 ฝั่ง) จึงโชว์ส่วนต่างแบบสมมาตร
+        // เกม/สไตล์/แนวเกม ใช้คะแนนแบบ dice (สนใจทั้ง 2 ฝั่ง) จึงโชว์ส่วนต่างแบบสมมาตร
         games: symDiff(user.games, cand.games),
         styles: symDiff(user.styles, cand.styles),
+        genres: symDiff(userGenres, candGenres),
         // วัน/เวลา ใช้คะแนนจาก "ความครอบคลุมความต้องการของคุณ" จึงโชว์เฉพาะสิ่งที่คุณอยากได้แต่เขาไม่มี
         days: user.days.filter(function(id){ return cand.days.indexOf(id)===-1; }).map(function(id){ return DAY_LABELS[id] || id; }),
         times: user.times.filter(function(id){ return cand.times.indexOf(id)===-1; }).map(function(id){ return TIME_FULL_LABELS[id] || id; })
@@ -335,7 +366,9 @@
       days: existing ? existing.days.slice() : [],
       times: existing ? existing.times.slice() : [],
       styles: existing ? existing.styles.slice() : [],
-      goodToKnow: existing ? existing.goodToKnow : ""
+      genres: existing && existing.genres ? existing.genres.slice() : [],
+      goodToKnow: existing ? existing.goodToKnow : "",
+      minMatchPct: existing && typeof existing.minMatchPct === "number" ? existing.minMatchPct : 0
     };
 
     var form = el("form", {});
@@ -481,6 +514,45 @@
     stylesField.appendChild(stylesRow);
     form.appendChild(stylesField);
 
+    // genres
+    var genresField = el("div",{class:"field"});
+    genresField.appendChild(el("label",{class:"field-label"},["แนวเกมที่ชอบ (เลือกได้สูงสุด 4)"]));
+    var genresRow = el("div",{class:"chip-row"});
+    function renderGenres(){
+      genresRow.innerHTML = "";
+      GENRES.forEach(function(g){
+        var active = data.genres.indexOf(g)>-1;
+        var chip = el("div",{class:"chip"+(active?" active":"")},[g]);
+        chip.addEventListener("click", function(){
+          var i = data.genres.indexOf(g);
+          if(i>-1) data.genres.splice(i,1);
+          else if(data.genres.length<4) data.genres.push(g);
+          else showToast("เลือกได้สูงสุด 4 แนว");
+          renderGenres();
+        });
+        genresRow.appendChild(chip);
+      });
+    }
+    renderGenres();
+    genresField.appendChild(genresRow);
+    form.appendChild(genresField);
+
+    // minimum expected match %
+    var minMatchField = el("div",{class:"field"});
+    minMatchField.appendChild(el("label",{class:"field-label"},["ระดับ % ที่อยากให้ match กันขั้นต่ำ (0 = ไม่กำหนด)"]));
+    var minMatchRow = el("div",{style:"display:flex;align-items:center;gap:12px;"});
+    var minMatchInput = el("input",{type:"range", min:"0", max:"100", step:"5", value:String(data.minMatchPct), style:"flex:1;"});
+    var minMatchValue = el("span",{style:"font-weight:600;min-width:44px;text-align:right;"},[data.minMatchPct===0 ? "ไม่กำหนด" : data.minMatchPct+"%"]);
+    minMatchInput.addEventListener("input", function(){
+      data.minMatchPct = parseInt(minMatchInput.value, 10) || 0;
+      minMatchValue.textContent = data.minMatchPct===0 ? "ไม่กำหนด" : data.minMatchPct+"%";
+    });
+    minMatchRow.appendChild(minMatchInput);
+    minMatchRow.appendChild(minMatchValue);
+    minMatchField.appendChild(minMatchRow);
+    minMatchField.appendChild(el("div",{class:"char-count"},["คนที่ % ตรงกับคุณต่ำกว่านี้ยังทักหากันได้ปกติ แค่จะมีสัญลักษณ์ ⚠️ ขึ้นเตือนข้างชื่อเขา"]));
+    form.appendChild(minMatchField);
+
     // good to know
     var gtkField = el("div",{class:"field"});
     gtkField.appendChild(el("label",{class:"field-label"},["อยากให้คนที่มาเล่นด้วยรู้ไว้ก่อน (Good to know)"]));
@@ -596,6 +668,10 @@
       var dot = el("span",{class:"online-dot live"});
       nameRow.insertBefore(dot, nameRow.firstChild);
     }
+    if(state.profile && state.profile.minMatchPct > 0 && score.total < state.profile.minMatchPct){
+      var warnMark = el("span",{class:"match-warn", title:"% ตรงกัน ("+score.total+"%) ต่ำกว่าระดับขั้นต่ำที่คุณตั้งไว้ ("+state.profile.minMatchPct+"%) — ยังทักไปคุยได้ปกติ"},["⚠️"]);
+      nameRow.appendChild(warnMark);
+    }
     idBox.appendChild(nameRow);
     idBox.appendChild(el("div",{class:"p-card-status"},[(online?"ออนไลน์ตอนนี้":"ออฟไลน์")+" · "+GENDER_LABELS[cand.gender]]));
     idBox.appendChild(buildReputationWidget(cand));
@@ -614,16 +690,24 @@
     cand.styles.forEach(function(s){ stylesRow.appendChild(el("span",{class:"tag style-tag"},[s])); });
     card.appendChild(stylesRow);
 
+    if(cand.genres && cand.genres.length){
+      var genresRow = el("div",{class:"p-card-games"});
+      cand.genres.forEach(function(g){ genresRow.appendChild(el("span",{class:"tag genre-tag"},[g])); });
+      card.appendChild(genresRow);
+    }
+
     var metaRow = el("div",{class:"p-card-games"});
     (cand.goal||[]).forEach(function(gid){ metaRow.appendChild(el("span",{class:"tag goal-tag"},[GOAL_LABELS[gid]||gid])); });
     card.appendChild(metaRow);
 
     var breakdown = el("div",{class:"breakdown"});
+    var showMismatch = isShowMismatch();
     [
       {label:"เกม", pct:score.breakdown.games, diff:score.mismatch.games},
       {label:"วัน", pct:score.breakdown.day, diff:score.mismatch.days},
       {label:"เวลา", pct:score.breakdown.time, diff:score.mismatch.times},
-      {label:"สไตล์", pct:score.breakdown.style, diff:score.mismatch.styles}
+      {label:"สไตล์", pct:score.breakdown.style, diff:score.mismatch.styles},
+      {label:"แนวเกม", pct:score.breakdown.genre, diff:score.mismatch.genres}
     ].forEach(function(c){
       var row = el("div",{class:"breakdown-row"});
       row.appendChild(el("span",{class:"breakdown-label"},[c.label]));
@@ -635,10 +719,12 @@
       row.appendChild(el("span",{class:"breakdown-pct"},[c.pct+"%"]));
       breakdown.appendChild(row);
 
-      var detail = c.diff.length
-        ? el("div",{class:"breakdown-detail"},["ไม่ตรงกัน: ", el("b",{},[c.diff.join(", ")])])
-        : el("div",{class:"breakdown-detail match-full"},["ตรงกันหมดทุกอย่าง ✓"]);
-      breakdown.appendChild(detail);
+      if(showMismatch){
+        var detail = c.diff.length
+          ? el("div",{class:"breakdown-detail"},["ไม่ตรงกัน: ", el("b",{},[c.diff.join(", ")])])
+          : el("div",{class:"breakdown-detail match-full"},["ตรงกันหมดทุกอย่าง ✓"]);
+        breakdown.appendChild(detail);
+      }
     });
     card.appendChild(breakdown);
 
@@ -1330,7 +1416,44 @@
   document.getElementById("searchInput").addEventListener("input", renderGrid);
   document.getElementById("gameFilter").addEventListener("change", renderGrid);
   document.getElementById("sortFilter").addEventListener("change", renderGrid);
+  document.getElementById("mismatchToggleBtn").addEventListener("click", function(){
+    setShowMismatch(!isShowMismatch());
+    updateMismatchToggleBtn();
+    if(!document.getElementById("viewLobby").hidden) renderGrid();
+  });
+
+  /* ---------------- emoji picker (chat input) ---------------- */
+  (function setupEmojiPicker(){
+    var btn = document.getElementById("emojiBtn");
+    var picker = document.getElementById("emojiPicker");
+    if(!btn || !picker) return;
+
+    function renderPicker(){
+      picker.innerHTML = "";
+      EMOJIS.forEach(function(em){
+        var emBtn = el("button",{type:"button", class:"emoji-option"},[em]);
+        emBtn.addEventListener("click", function(){
+          var input = document.getElementById("chatInput");
+          input.value += em;
+          input.focus();
+        });
+        picker.appendChild(emBtn);
+      });
+    }
+    renderPicker();
+
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      picker.hidden = !picker.hidden;
+    });
+    document.addEventListener("click", function(e){
+      if(!picker.hidden && !picker.contains(e.target) && e.target !== btn){
+        picker.hidden = true;
+      }
+    });
+  })();
 
   updateNotifToggleBtn();
+  updateMismatchToggleBtn();
   boot();
 })();

@@ -102,6 +102,7 @@
             <option value="match">เรียงตาม % ตรงกัน</option>
             <option value="online">ออนไลน์ก่อน</option>
           </select>
+          <button type="button" class="btn btn-ghost btn-sm mismatch-toggle" id="mismatchToggleBtn"></button>
         </div>
         <div class="card-grid" id="cardGrid"></div>
       </div>
@@ -159,7 +160,11 @@
   </div>
   <div class="chat-good-to-know" id="chatGoodToKnow"></div>
   <div class="chat-messages" id="chatMessages"></div>
+  <div class="emoji-picker-wrap">
+    <div class="emoji-picker" id="emojiPicker" hidden></div>
+  </div>
   <form class="chat-input-row" id="chatForm">
+    <button type="button" class="icon-btn emoji-btn" id="emojiBtn" aria-label="เลือกอิโมจิ" title="เลือกอิโมจิ">🙂</button>
     <input type="text" id="chatInput" placeholder="พิมพ์ข้อความ..." autocomplete="off">
     <button type="submit" aria-label="ส่ง">➤</button>
   </form>

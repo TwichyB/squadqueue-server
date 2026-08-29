@@ -19,7 +19,11 @@ router.put("/", requireAuth, async (req, res) => {
   const days = sanitizeArray(body.days, 7);
   const times = sanitizeArray(body.times, 4);
   const styles = sanitizeArray(body.styles, 4);
+  const genres = sanitizeArray(body.genres, 4);
   const goodToKnow = String(body.goodToKnow || "").slice(0, 140);
+  var minMatchPct = parseInt(body.minMatchPct, 10);
+  if (!Number.isInteger(minMatchPct) || minMatchPct < 0) minMatchPct = 0;
+  if (minMatchPct > 100) minMatchPct = 100;
 
   if (!name || games.length === 0 || days.length === 0 || times.length === 0) {
     return res.status(400).json({ error: "กรอกชื่อ และเลือกอย่างน้อย 1 เกม, 1 วัน, 1 ช่วงเวลา ก่อนนะ" });
@@ -27,11 +31,11 @@ router.put("/", requireAuth, async (req, res) => {
 
   try {
     await pool.query(
-      `INSERT INTO profiles (user_id, name, gender, goal, games, days, times, styles, good_to_know, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
+      `INSERT INTO profiles (user_id, name, gender, goal, games, days, times, styles, genres, good_to_know, min_match_pct, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, now())
        ON CONFLICT (user_id) DO UPDATE SET
          name = $2, gender = $3, goal = $4, games = $5, days = $6, times = $7, styles = $8,
-         good_to_know = $9, updated_at = now()`,
+         genres = $9, good_to_know = $10, min_match_pct = $11, updated_at = now()`,
       [
         req.userId,
         name,
@@ -41,7 +45,9 @@ router.put("/", requireAuth, async (req, res) => {
         JSON.stringify(days),
         JSON.stringify(times),
         JSON.stringify(styles),
-        goodToKnow
+        JSON.stringify(genres),
+        goodToKnow,
+        minMatchPct
       ]
     );
     res.json({ ok: true });

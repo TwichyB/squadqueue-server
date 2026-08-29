@@ -44,6 +44,15 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- thumbs-up / thumbs-down them (see reputation_votes below).
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS reputation INTEGER NOT NULL DEFAULT 100;
 
+-- Game genre tags (survival, cozy, farming, etc.) — a second matching
+-- dimension alongside specific game titles.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS genres JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- Each person's own minimum acceptable match %. 0 means "no preference set".
+-- Purely a personal display filter: candidates below it are still fully
+-- visible and messageable, just flagged with a warning symbol in the UI.
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS min_match_pct INTEGER NOT NULL DEFAULT 0;
+
 CREATE TABLE IF NOT EXISTS messages (
   id SERIAL PRIMARY KEY,
   sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

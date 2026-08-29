@@ -260,8 +260,10 @@ router.get("/me", requireAuth, async (req, res) => {
           days: row.days,
           times: row.times,
           styles: row.styles,
+          genres: row.genres,
           goodToKnow: row.good_to_know,
-          reputation: row.reputation
+          reputation: row.reputation,
+          minMatchPct: row.min_match_pct
         }
       : null;
 

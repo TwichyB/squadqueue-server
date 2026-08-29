@@ -8,7 +8,7 @@ const router = express.Router();
 router.get("/", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT u.id, p.name, p.gender, p.goal, p.games, p.days, p.times, p.styles, p.good_to_know,
+      `SELECT u.id, p.name, p.gender, p.goal, p.games, p.days, p.times, p.styles, p.genres, p.good_to_know,
               p.reputation, rv.value AS my_vote
        FROM profiles p
        JOIN users u ON u.id = p.user_id
@@ -33,6 +33,7 @@ router.get("/", requireAuth, async (req, res) => {
       days: row.days,
       times: row.times,
       styles: row.styles,
+      genres: row.genres,
       goodToKnow: row.good_to_know,
       reputation: row.reputation,
       myVote: row.my_vote || 0,
